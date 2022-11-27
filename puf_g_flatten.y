@@ -2605,11 +2605,19 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
     while(subModulesIter) {
         if(!subModulesIter->modulePointer) { //the primitive module definition does not exists - it is either a primitive element or not defined
             printf("in if while subModulesIter->primitiveName = %s\n", subModulesIter->primitiveName);
+        
             rep = getRepresentation(subModulesIter->primitiveName);
+            ns = getNoiseSensitivity(subModulesIter->primitiveName);
             subModulesIter->rep = rep;
-            subModulesIter->ns = NULL;
-            printf("rep=%s\n", rep);
-            return rep;
+            subModulesIter->ns = na;
+            if(PACSetting==0) {
+                printf("rep=%s\n", rep);
+                return rep;
+            }
+            else if(PACSetting==1) {
+                printf("ns=%s\n", ns);
+                return ns;
+            }
         }
         else {
             subMod = subModulesIter->modulePointer; //pointer to the submodule
