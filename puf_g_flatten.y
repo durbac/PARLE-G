@@ -131,11 +131,11 @@ typedef struct node {
 //Node to store list of submodules in a module
 typedef struct primNode {
     char* primitiveName;
-    ModuleNode* modulePointer; //pointer to the module in the interim model
-    char* inputVariable; //input given to the module - each module instantiation might have different input param
-    char* rep; //representation class chosen for the module
-    char* ns; //noise sensitivity of module
-    int visited; //flag to check if the module instantiation has been visited during parsing
+    ModuleNode* modulePointer;  //pointer to the module in the interim model
+    char* inputVariable;        //input given to the module - each module instantiation might have different input param
+    char* rep;                  //representation class chosen for the module
+    char* ns;                   //noise sensitivity of module
+    int visited;                //flag to check if the module instantiation has been visited during parsing
     struct primNode* nextPrim;
 }PrimNode;
 
@@ -148,7 +148,7 @@ typedef struct adjacencyNode {
 // graph representation of a module
 typedef struct graphNode {
     char* varName;      //variable name
-    char** adjList;      //list of variables connected to this node (directed graph) - out edges
+    char** adjList;     //list of variables connected to this node (directed graph) - out edges
     int outDeg;         // out degree
     int visited;        //to check if the variable has been traversed or not
     int isPrimitive;    // true if the variable is the output of a primitive call
@@ -156,7 +156,7 @@ typedef struct graphNode {
     struct graphNode *nextGraphNode;
 }GraphNode;
 
-//to hold the vertices with 0 in-degree 
+// to hold the start vertices - vertices with 0 in-degree 
 typedef struct graphStartNode {
     GraphNode* initNode;
     struct graphStartNode* nextStartNode;
@@ -201,7 +201,6 @@ ModuleNode *createModuleNode(char*, StatementNode*, InputDefNode*, InputDefNode*
 InputDefNode *createInputDefNode(char*, char*, InputDefNode*);
 PrimitiveCallNode *createPrimitiveCallNode(char*, char*);
 StatementNode *createStatementNode(AssignmentNode*, IfElseStatementNode*, SerialStatementNode*, ParallelStatementNode*);
-// AssignmentNode *createAssignmentNode(char*, ExpressionNode*, PrimitiveCallNode*);
 AssignmentNode *createAssignmentNodeI(char*, ExpressionNode*, ExpressionNode*, PrimitiveCallNode*);
 ExpressionNode *createExpressionNode(ExpressionNode*, ExpressionNode*, char*);
 IfElseStatementNode *createIfElseStatementNode(ExpressionNode*, StatementNode*, ElseIfStatementNode*, StatementNode*);
@@ -209,14 +208,6 @@ ElseIfStatementNode *createElseIfStatementNode(ExpressionNode*, StatementNode*, 
 SerialStatementNode *createSerialStatementNode(AssignmentNode*, ExpressionNode*, StatementNode*);
 ParallelStatementNode *createParallelStatementNode(AssignmentNode*, ExpressionNode*, StatementNode*);
 
-
-//Stack functions
-// void initStack(stackDS *);
-// int emptyStack(stackDS *);
-// stackDS *createStack(char *, char *);
-// void pushStack(stackDS **, char*, char *);
-// void popStack(stackDS **);
-// void printStack(stackDS *);
 
 
 void extraxtPACComplexityFromPUFGObjectModel();
@@ -1163,18 +1154,18 @@ char* getRepresentation(char *type) {
         rep = "LTF";
     else if(strcmp(type,"APUF")==0)
         rep = "DFA";
-    if(strcmp(type,"DAPUF")==0) 
-        rep = "LTF";
-    if(strcmp(type,"XORAPUF")==0) 
-        rep = "LTF";
-    if(strcmp(type,"FFAPUF")==0) 
-        rep = "LTF_N";
-    if(strcmp(type,"FFXORAPUF")==0) 
-        rep = "LTF_N";
-    if(strcmp(type,"IPUF")==0) 
-        rep = "LTF_N";
-    if(strcmp(type,"MPUF")==0) 
-        rep = "LTF";
+    // if(strcmp(type,"DAPUF")==0) 
+    //     rep = "LTF";
+    // if(strcmp(type,"XORAPUF")==0) 
+    //     rep = "LTF";
+    // if(strcmp(type,"FFAPUF")==0) 
+    //     rep = "LTF_N";
+    // if(strcmp(type,"FFXORAPUF")==0) 
+    //     rep = "LTF_N";
+    // if(strcmp(type,"IPUF")==0) 
+    //     rep = "LTF_N";
+    // if(strcmp(type,"MPUF")==0) 
+    //     rep = "LTF";
     else if(strcmp(type,"ROPUF")==0)
         rep = "DL";
     else if(strcmp(type,"ARBITER")==0)   //to be checked at parent module 
