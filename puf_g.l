@@ -308,7 +308,7 @@ XOR {
                         return STRING;
                        }
 
-[1-9][0-9]* {
+[0-9][0-9]* {
         yylval.string = strdup(yytext);
         ECHO;
         return NUMBER;
