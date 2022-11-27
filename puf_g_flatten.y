@@ -889,7 +889,7 @@ ElseIfStatementNode *createElseIfStatementNode(ExpressionNode *ifexpression, Sta
         elseifnode-> elseIfStatementPointer = elseifnext;
         // elseifnode-> elseStatementPointer = elsestatement;
     }
-    else {
+    else {  
         printf("Malloc Error: Cannot Create Else If Statement node!\n");
     }
     return (elseifnode);
@@ -1157,7 +1157,7 @@ int isPrimitive(ModuleNode *module) {
 // map primitives to representations - primitive names are considered to be fixed
 // DC: change 30/7/21
 char* getRepresentation(char *type) {
-    // printf("\ngetRepresentation %s\n", type);
+    printf("\ngetRepresentation %s\n", type);
     char *rep;
     if(strcmp(type,"DELAY_CHAIN")==0) 
         rep = "LTF";
@@ -1195,7 +1195,8 @@ char* getNoiseSensitivity(char* rep) {
 }
 
 //change representation depending on the input and output representations - this function assumes only one type of submodule in a given module
-//DC 30/7/21 - change to incorporate new results in other 
+// DC 30/7/21 - change to incorporate new results in other 
+// include DL composition - 26/11/22
 char* composeRepresentation(char* rep, char* it, char* ot) {
     printf("\ncomposeRepresentation rep = %s \t it = %s \t ot = %s\n", rep, it, ot);
     char* composed_rep;
@@ -1219,6 +1220,9 @@ char* composeRepresentation(char* rep, char* it, char* ot) {
         else if(strcmp(rep , "DFA")==0) {  //dc: change this, transform dfa to ltf depending on the output transformation
             composed_rep = "LTF";
         }
+        else if(strcmp(rep , "DL")==0) {  //dc: change composed representation class to DL if constituent PUFs can be represented by DL
+            composed_rep = "DL";
+        }
     }
     return composed_rep;
 }
@@ -1238,6 +1242,8 @@ char* composeRepresentationGeneric(char* rep1, char* rep2, char* ot) {
             composed_rep = "LTF_N";
         if(strcmp(rep1, "LTF_N")!=0 && strcmp(rep2, "LTF_N")!=0)
             composed_rep = "LTF";
+        if(strcmp(rep1, "DL")!=0 && strcmp(rep2, "DL")!=0)  //compose two DL representations to DL
+            composed_rep = "DL";
     }
     //input operations - interpose - DFA is used for APUF
     if(strcmp(ot, "interpose")==0) {
@@ -1257,6 +1263,7 @@ char* composeRepresentationGeneric(char* rep1, char* rep2, char* ot) {
     return composed_rep;
 }
 
+// dc: 27/11/22 - change function to incorporate modification of ns and not rep
 char* composeNoiseSensitivity(char* ns, char* it, char* ot) {
     printf("\ncomposeNoiseSensitivity ns = %s \t it = %s \t ot = %s\n", ns, it, ot);
     char* composed_ns;
@@ -1279,6 +1286,9 @@ char* composeNoiseSensitivity(char* ns, char* it, char* ot) {
         }
         else if(strcmp(ns , "DFA")==0) {  //dc: change this, transform dfa to ltf depending on the output transformation
             composed_ns = "LTF";
+        }
+        else if(strcmp(ns , "DL")==0) {  //dc: dl remains same for any output transformation operation
+            composed_ns = "DL";
         }
     }
     return composed_ns;
@@ -1340,7 +1350,7 @@ void printGraph() {
 }
 
 int checkSelfAssignment(AssignmentNode* assignment) {
-    printf("--checkSelfAssignment--\n"); //checks statements of the form x = x + a[i]
+    printf("------checkSelfAssignment------\n"); //checks statements of the form x = x + a[i]
     char* assignVar = assignment->assignmentName;
     ExpressionNode* assignmentExpression = assignment->expressionPointer;
     // printf("--------in expressionPointer block before %s --------\n", evaluateExpression(assignmentExpression));
@@ -1369,7 +1379,7 @@ int checkSelfAssignment(AssignmentNode* assignment) {
 }
 
 /*
-adds a new node to to the module graph
+adds a new node to to the module graph (graph representation of a module)
 typedef struct graphNode {
     char* varName; //variable name
     char* adjList; //list of variables connected to this node (dirwcted graph)
@@ -1435,15 +1445,16 @@ void addGraphNode(AssignmentNode* assignment) {
                 gnode->inLoop = selfLoopExists;
             }
             if(headGraphNode==NULL) {
-                printf("in if addGraphNode\n");
+                printf("First addGraphNode\n");
                 headGraphNode = gnode;
             }
             else {
-                printf("in else addGraphNode\n");
+                printf("Adding another addGraphNode\n");
                 gnode->nextGraphNode = headGraphNode;
                 headGraphNode = gnode;
             }    
         }
+        printf("Calling print from addGraphNode\n");
         printGraphNode(gnode);
         // printGraph();
     }
@@ -1465,7 +1476,9 @@ void addEdge(AssignmentNode* assignment) {
             GraphStartNode* startNode = headInitNode;
             while(startNode) {
                 GraphNode* gnode = startNode->initNode;
-                //gnode - nodes corresponding to the module input params
+                /*
+                  gnode - nodes corresponding to the module input params
+                */
                 while(gnode) {
                     printf("\t\tin gnode loop - %s - %s\n", gnode->varName, inp_var);
                     if(strcmp(gnode->varName, inp_var)==0) {
@@ -1496,7 +1509,7 @@ void addEdge(AssignmentNode* assignment) {
         char* expStr = evaluateExpression(assignment->expressionPointer);
         printf("expStr = %s\t----------lhs = %d \t rhs = %d \n", expStr, assignment->expressionPointer->leftChild!=NULL, assignment->expressionPointer->rightChild!=NULL);
         
-        //for statements with constant assignments
+        //for statements with constant assignments - to-do: chnage - constants need not be only 0 or 1
         if(strcmp(expStr,"0")==0 || strcmp(expStr,"1")==0) { //dc_todo: change to all numbers from 0-9 using ascii
             // printf("------constant variable = %s------\n", expStr);
             // addGraphNode() for constant term;
@@ -1518,20 +1531,22 @@ void addEdge(AssignmentNode* assignment) {
                     headGraphNode = cgnode;
                 }
             }
+            printf("Calling print from addEdge->expression\n");
             printGraphNode(cgnode);
         }
-        else if(assignment->expressionPointer->leftChild || assignment->expressionPointer->rightChild) {
+        else if(assignment->expressionPointer->leftChild || assignment->expressionPointer->rightChild) { // when there is an operation on the rhs
             // operation in rhs of assignment operation
             char* operator = assignment->expressionPointer->op;
-            printf("in addEdge operator = %s\n", operator);
+            printf("in addEdge -----------------------------------------------------------------------------------------operator = %s\n", operator);
             int foundNode = 0;
             GraphStartNode* startNode = headInitNode;
             while(startNode) {
                 GraphNode* gnode = startNode->initNode;
                 while(gnode) {         //gnode - nodes corresponding to the module input params
-                    // printf("\t\tin gnode loop - %s - %s\n", gnode->varName, inp_var);
+                    printf("\t\tin gnode loop - %s\n", gnode->varName);
+                    // checking for an indexing operation
                     if(strcmp(operator,"[")==0 && strstr(expStr, gnode->varName)) {
-                        // printf("----------------------found input_variable----------------------\n");
+                        printf("----------------------found input_variable----------------------\n");
                         gnode->outDeg += 1;
                         char** outEdges = (char**)malloc(sizeof(char*)*(gnode->outDeg));
                         for(int i=0;i<gnode->outDeg-1;i++) {
@@ -1543,6 +1558,13 @@ void addEdge(AssignmentNode* assignment) {
                         foundNode = 1;
                         break;
                     }
+                    else {
+                        printf("other operation !!!!! \n");
+                        if(assignment->expressionPointer->leftChild) {
+                            char* leftExp = evaluateExpression(assignment->expressionPointer->leftChild);
+                            printf("leftExp = %s\n", leftExp);
+                        }
+                    }
                     gnode = gnode->nextGraphNode;
                 }
                 if(foundNode==1) //if input variable is found in a previous iteration, we need not check for other start nodes
@@ -1550,21 +1572,38 @@ void addEdge(AssignmentNode* assignment) {
                 startNode = startNode->nextStartNode;
             }
         }
-        else{
+        else{ //only single variable in rhs
             printf("in addedge - variable in rhs assignemnt\n");
             //use the expressionNode to find the operands and operator
             // printExpressionTree(assignment->expressionPointer);
             printGraph();
             char* operator = assignment->expressionPointer->op;
-            printf("\noperator = %s \t %s\n", operator, expStr);
+            printf("\n rhs variable = %s \t %s\n", operator, expStr);
             int foundNode = 0;
             GraphStartNode* startNode = headInitNode;
             while(startNode) {
-                // printf("\t\tstartnode\n");
+                printf("\t\tstartnode\n");
                 GraphNode* gnode = startNode->initNode;
                 while(gnode) {         //gnode - nodes corresponding to the module input params
+                    printf("\n%s  ", gnode->varName);
+                    // copied portion from printGraph to compare
+                    // if(gnode->adjList!=NULL) {
+                    //     for(int j=0;j<gnode->outDeg;j++) {
+                    //         printf("-> %s", gnode->adjList[j]);
+                    //         GraphNode* inode = gnode;
+                    //         while(inode) {
+                    //             // printf("\nin inode loop \t inode->varName = %s \t gnode->adjList[%d] = %s\n", inode->varName, j, gnode->adjList[j]);
+                    //             if(strcmp(inode->varName, gnode->adjList[j])==0 && inode->visited==0) {
+                    //                 printf("adj[%d]\n", j);
+                    //                 printGraphNode(inode);
+                    //                 inode->visited=1;
+                    //             }
+                    //             inode = inode->nextGraphNode;
+                    //         }
+                    //     }
+                    // }
                     printf("\t\tin gnode loop - %s\n", gnode->varName);
-                    if(strcmp(expStr, gnode->varName)==0) {
+                    if(strcmp(operator, gnode->varName)==0) { //dc: check for substring instead of exact match.. or better left part of [] in case of indexing
                         // printf("----------------------found input_variable----------------------\n");
                         gnode->outDeg += 1;
                         char** outEdges = (char**)malloc(sizeof(char*)*(gnode->outDeg));
@@ -1662,7 +1701,44 @@ ModuleNode* find_submodule(ModuleNode* module) {    //wrapper of recursive calls
     return NULL;
 }*/
 
-void createGraphStartNode() {
+void createGraphStartNodes(InputDefNode* input) {
+    printf("-------------in createGraphStartNodes-------------\n");
+    GraphNode* gnode;
+    while(input) {
+        if((gnode = (GraphNode*)malloc(sizeof(GraphNode)))!=NULL) {
+            // printf("variableName = %s\n", input->tuple);
+            gnode->varName = input->tuple;
+            gnode->adjList = NULL;
+            gnode->outDeg = 0;
+            gnode->visited = 0;
+            gnode->isPrimitive = 0;
+            
+            //indicates that the assignment statement lies in a series or parallel block
+            gnode->inLoop = 0;
+            if(headInitNode==NULL) {
+                // printf("in if\n");
+                headInitNode = (GraphStartNode*)malloc(sizeof(GraphStartNode));
+                headInitNode->initNode = gnode;
+                headInitNode->nextStartNode = NULL;
+            }
+            else {
+                // printf("in else\n");
+                GraphStartNode* startNode = (GraphStartNode*)malloc(sizeof(GraphStartNode));
+                startNode->initNode = gnode;
+                startNode->nextStartNode = headInitNode;
+                headInitNode = startNode;
+            }
+        }
+        input = input->nextInputDef;    
+    }
+    printf("After adding module input params : \n*******************************************************\nGraphStartNodes ");
+    //print start nodes
+    GraphStartNode* startNode = headInitNode;
+    while(startNode) {
+        printf("==> %s ", startNode->initNode->varName); //prints the name of the variable (vertex name)
+        startNode = startNode->nextStartNode;
+    }
+    printf("\n*******************************************************\nAFTER ADDING NODES CORREPSONDING TO INPUT PARAMETERS IN GRAPH \n\n");
 
 }
 
@@ -1758,8 +1834,10 @@ void findSubmodules(ModuleNode* module, PrimNode** primList) {    //wrapper of r
     printf("findSubmodules %s\n", module->primitivePointer);
     StatementNode *statement = module->statementPointer;
 
-    // add vertices for module formal parameters - dc: replace this with AddGraphNode() function call
-    InputDefNode *input = module->inputDefPointer;
+    // add vertices for module formal parameters - dc: replace this with createGraphStartNode() function call
+    createGraphStartNodes(module->inputDefPointer);
+    //moved commented part to createGraphStartNodes()
+/*    InputDefNode *input = module->inputDefPointer;
     GraphNode* gnode;
     while(input) {
         if((gnode = (GraphNode*)malloc(sizeof(GraphNode)))!=NULL) {
@@ -1797,7 +1875,7 @@ void findSubmodules(ModuleNode* module, PrimNode** primList) {    //wrapper of r
     }
 
     printf("\n*******************************************************\nAFTER ADDING NODES CORREPSONDING TO INPUT PARAMETERS IN GRAPH \n\n");
-
+*/
     // to identify the submodules
     statement = module->statementPointer;
     findSubmodulesSub(statement, primList); //called recursively
@@ -2073,8 +2151,6 @@ char* identifyInputTransformation(ModuleNode* module, ModuleNode* submod) {
     return 0;
 }*/
 
-
-
 int IsXOR (ModuleNode* module, ModuleNode* submod) {    //combined using XOR gate(s)
     printf("-----> in isXOR %s - %s\n", module->primitivePointer, submod->primitivePointer);
     StatementNode *st = module->statementPointer;
@@ -2100,7 +2176,7 @@ int IsXOR (ModuleNode* module, ModuleNode* submod) {    //combined using XOR gat
             output_var = st->assignmentPointer->assignmentName;
             // printf("output_var = %s \t %d\n", output_var, st->assignmentPointer->expressionPointer!=NULL);
             init_var = st->assignmentPointer->expressionPointer->op;
-            if(strcmp(init_var, "1")==0) {
+            if(strcmp(init_var, "1")==0 || strcmp(init_var, "0")==0) {
                 // printf("set init_xor = 1\n");
                 init_xor = 1;
             }
@@ -2350,7 +2426,7 @@ char* identifyOutputTransformation (ModuleNode *module, ModuleNode *submod) {
 /**************************************************************************************** 
                         end of PUF identification functions 
 *****************************************************************************************/
-
+//basic function used in ICCAD 2020 version
 /*char* identify_module (ModuleNode *module) {
     printf("-----identify_module %d %s\n", module!=NULL, module->primitivePointer);
     char *type, *rep;//representation
@@ -2388,6 +2464,7 @@ char* identifyOutputTransformation (ModuleNode *module, ModuleNode *submod) {
     return rep;
 }*/
 
+// modified version implemented in Jan 2022
 /*char* identify_modules (ModuleNode *module) {
     printf("============================= identify_modules %d %s\n", module!=NULL, module->primitivePointer);
     char *type, *rep; //representation
@@ -2438,6 +2515,7 @@ char* identifyOutputTransformation (ModuleNode *module, ModuleNode *submod) {
     return rep;
 }*/
 
+// modified version after Jan 2022
 //identifies the module and returns a suitable representation class
 /*char* identifyModulesCombined (ModuleNode *module) {
     printf("-------- identifyModulesCombined %d %s----------\n", module!=NULL, module->primitivePointer);
@@ -2574,7 +2652,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
 
     while(subModulesIter) {
         if(!subModulesIter->modulePointer) { //the primitive module definition does not exists - it is either a primitive element or not defined
-            printf("in if while\n");
+            printf("in if while subModulesIter->primitiveName = %s\n", subModulesIter->primitiveName);
             rep = getRepresentation(subModulesIter->primitiveName);
             subModulesIter->rep = rep;
             subModulesIter->ns = NULL;
@@ -2629,6 +2707,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
     }
     else if(numberOfSubModules==2) {
         printf("-------------------------------- numberOfSubModules = 2\n");// \t\t it = %s \t ot = %s\n", it, ot);
+
         return "";
     }
 
@@ -3053,11 +3132,11 @@ int checkPoly (char *var) {
 }*/
 
 void computeSampleComplexity (Node *param, int PACSetting, char *model, char* ns) {
-    printf("computeSampleComplexity \t rep = %s \n", model);
+    printf("computeSampleComplexity \t rep = %s \t PACSetting = %d \n", model, PACSetting);
     Node *var = param;
     Node *n = NULL, *m = NULL, *k = NULL, *ff_in = NULL, *ff_out = NULL, *s = NULL;//, *eta;
     while(var) {
-        // printf("in while var = %s\n", var->param);
+        printf("in while var = %s\n", var->param);
         if(strcmp(var->param,"n")==0) {
             n = var;
             // printf("%s\n", n->param);
@@ -3088,13 +3167,15 @@ void computeSampleComplexity (Node *param, int PACSetting, char *model, char* ns
         }
         var = var->next;
     }
-    // printf("after reading variables\n");
+    // printf("after reading variables %s\n", n->param);
     if(PACSetting==0) {
         if(strcmp(model, "DFA")==0) {
+            // printf("in dfa\n");
             //parameter to be checked = no of states
             //if no of states is poly then puf is PAC Learnable
-            char* n_states;
-            n_states = strcat(strcat(strcat(strcat(strcat(n->param, "*"), "("), m->param), "+1)"), "^2");
+            char n_states[100];
+            strcpy(n_states, n->param);
+            strcat(strcat(strcat(strcat(strcat(n_states, "*"), "("), "m"), "+1)"), "^2"); //format of sample complexity for dfa rep
             printf("n_states = %s\n", n_states);
             if(checkPoly(n_states)) {
                 printf("---------------------------------------------------------------\nPUF is PAC Learnable using DFA Representation\n---------------------------------------------------------------\n\n");
