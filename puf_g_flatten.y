@@ -1227,7 +1227,7 @@ char* composeRepresentation(char* rep, char* it, char* ot) {
 char* composeRepresentationGeneric(char* rep1, char* rep2, char* ot) {
     printf("\ncomposeRepresentationGeneric rep1 = %s \t rep2 = %s \t ot = %s\n", rep1, rep2, ot);
     char* composed_rep = "-";
-    //output operations
+    // add case for other output operations
     if(strcmp(ot, "xor")==0) {
         if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0) && (strcmp(rep2, "DFA")==0 || strcmp(rep2, "LTF")==0 || strcmp(rep2, "LTF_N")==0)) 
             composed_rep = "LTF_N";
@@ -1749,12 +1749,12 @@ void createGraph() {
 
 void findSubmodulesSub(StatementNode* statement, PrimNode** primList) {
     printf("findSubmodulesSub %d, %d\t\n", statement!=NULL, *primList!=NULL);
-    // if(statement) {
-        // printf("as = %d\t ifelse = %d\t ser = %d\t par = %d\n", statement->assignmentPointer!=NULL, statement->ifElsePointer!=NULL, statement->serialPointer!=NULL, statement->parallelPointer!=NULL);
-        // if(statement->assignmentPointer!=NULL) {
-        //     printf("%s\n", statement->assignmentPointer->assignmentName);
-        // }
-    // }
+    /*if(statement) {
+        printf("as = %d\t ifelse = %d\t ser = %d\t par = %d\n", statement->assignmentPointer!=NULL, statement->ifElsePointer!=NULL, statement->serialPointer!=NULL, statement->parallelPointer!=NULL);
+        if(statement->assignmentPointer!=NULL) {
+            printf("%s\n", statement->assignmentPointer->assignmentName);
+        }
+    }*/
     char *primName = NULL;
     char* inputVar = NULL;
 
@@ -1827,50 +1827,11 @@ void findSubmodules(ModuleNode* module, PrimNode** primList) {    //wrapper of r
 
     // add vertices for module formal parameters - dc: replace this with createGraphStartNode() function call
     createGraphStartNodes(module->inputDefPointer);
-    //moved commented part to createGraphStartNodes()
-/*    InputDefNode *input = module->inputDefPointer;
-    GraphNode* gnode;
-    while(input) {
-        if((gnode = (GraphNode*)malloc(sizeof(GraphNode)))!=NULL) {
-            // printf("variableName = %s\n", input->tuple);
-            gnode->varName = input->tuple;
-            gnode->adjList = NULL;
-            gnode->outDeg = 0;
-            gnode->visited = 0;
-            gnode->isPrimitive = 0;
-            
-            //indicates that the assignment statement lies in a series or parallel block
-            gnode->inLoop = 0;
-            if(headInitNode==NULL) {
-                // printf("in if\n");
-                headInitNode = (GraphStartNode*)malloc(sizeof(GraphStartNode));
-                headInitNode->initNode = gnode;
-                headInitNode->nextStartNode = NULL;
-            }
-            else {
-                // printf("in else\n");
-                GraphStartNode* startNode = (GraphStartNode*)malloc(sizeof(GraphStartNode));
-                startNode->initNode = gnode;
-                startNode->nextStartNode = headInitNode;
-                headInitNode = startNode;
-            }
-        }
-        input = input->nextInputDef;    
-    }
-    printf("After adding module input params : \n*******************************************************\nGraphStartNodes ");
-    //print start nodes
-    GraphStartNode* startNode = headInitNode;
-    while(startNode) {
-        printf("==> %s ", startNode->initNode->varName); //prints the name of the variable (vertex name)
-        startNode = startNode->nextStartNode;
-    }
 
-    printf("\n*******************************************************\nAFTER ADDING NODES CORREPSONDING TO INPUT PARAMETERS IN GRAPH \n\n");
-*/
-    // to identify the submodules
+    // to identify the submodules, traverse the statements of the module
     statement = module->statementPointer;
     findSubmodulesSub(statement, primList); //called recursively
-    printf("after findSubmodulesSub of %s\nSUBMODULES : ", module->primitivePointer);
+    printf("after findSubmodulesSub of %s  SUBMODULES : \n ", module->primitivePointer);
     PrimNode *prim = *primList;
     while(prim) {
         printf("====> %s (%s) \t module = %d\n", prim->primitiveName, prim->inputVariable, (prim->modulePointer!=NULL));
@@ -2648,6 +2609,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
             subModulesIter->rep = rep;
             subModulesIter->ns = NULL;
             printf("rep=%s\n", rep);
+            return rep;
         }
         else {
             subMod = subModulesIter->modulePointer; //pointer to the submodule
