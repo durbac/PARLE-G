@@ -2,7 +2,7 @@ begin_mod XORAPUF (num n, num k, vec c, bit en)
 	parallel i=1 to k do
 		a[i] = APUF(n,c,en);
 	end_parallel
-	xorpuf_out = 1;
+	xorpuf_out = 0;
 	serial i=1 to k do
 		xorpuf_out = a[i] XOR xorpuf_out;
 	end_serial
