@@ -96,3 +96,11 @@ We propose a formal representation language to uniformly represent PUF construct
 > cc -o puf_g.out lex.yy.o y.tab.o -ll
 5. Execute the object file with the input PUF description
 > ./puf_g.out <file_name>
+
+## Implemneted features:
+  - Identification of primitive PUF constructions such as APUF, ROPUF
+  - Identification of input transformation operations such as feed-forward, interposition, recurrence
+  - Identification of output transformation operations such as XOR, MUX Network, Bent function
+  - Composition of representation class for PUF compositions 
+  - Computation of sample complexity in terms of the parameters (such as mistake bound for Linear Threshold Functions)
+
