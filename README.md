@@ -86,3 +86,13 @@ We propose a formal representation language to uniformly represent PUF construct
 
 ## Steps to run
 
+1. Compile Lex File
+> lex puf_g.l
+2. Compile YACC file
+> yacc -d puf_g.y
+3. Compile the generated C files
+> cc -c lex.yy.c y.tab.c
+4.  Create Object files
+> cc -o puf_g.out lex.yy.o y.tab.o -ll
+5. Execute the object file with the input PUF description
+> ./puf_g.out <file_name>
