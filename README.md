@@ -73,7 +73,7 @@ We propose a formal representation language to uniformly represent PUF construct
                     end parallel
 
 
-## Prerequisites:
+## Prerequisites
 
 ### For Linux (debian based systems)
 1. Install Lex and YACC packages
@@ -97,7 +97,7 @@ We propose a formal representation language to uniformly represent PUF construct
 5. Execute the object file with the input PUF description
 > ./puf_g.out <file_name>
 
-## Implemneted features:
+## Implemneted features
   - Identification of primitive PUF constructions such as APUF, ROPUF
   - Identification of input transformation operations such as feed-forward, interposition, recurrence
   - Identification of output transformation operations such as XOR, MUX Network, Bent function
