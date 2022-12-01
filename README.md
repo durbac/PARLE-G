@@ -72,4 +72,17 @@ We propose a formal representation language to uniformly represent PUF construct
                         STATEMENTS
                     end parallel
 
+
+## Prerequisites:
+
+### For Linux (debian based systems)
+1. Install Lex and YACC packages
+> sudo apt-get install flex
+> sudo apt-get install bison
+
+2. Install GCC Compiler
+> sudo apt install build-essential
+
+
 ## Steps to run
+
