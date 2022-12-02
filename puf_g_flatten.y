@@ -666,58 +666,6 @@ ModuleNode *createModuleNode(char *primitive, StatementNode *statement, InputDef
     return (modNode);
 }
 
-/*PrimitiveNode *createPrimitiveNode(PufPrimitiveNode *pufprimitive, BasicPrimitiveNode *basicprimitive) {
-    PrimitiveNode *primNode;
-    if((primNode = (PrimitiveNode*)malloc(sizeof(PrimitiveNode))) != NULL) {
-        // primNode->type = type;
-        primNode->pufPrimitivePointer = pufprimitive;
-        primNode->basicPrimitivePointer = basicprimitive;
-    }
-    else {
-        printf("Malloc Error: Cannot Create Primitive node!\n");
-    }
-    return (primNode);
-}*/
-
-/*PufPrimitiveNode *createPufPrimitiveNode(char *type) {//, char *dapuf, char *xorapuf, char *ffapufsiso, char *ffapufsimo, char *ffapufmimo, char *ffxorapuf, char *ipuf, char *mpuf, char *ropuf, char *cpufax
-    
-    PufPrimitiveNode *pufprimNode;
-    if((pufprimNode = (PufPrimitiveNode*)malloc(sizeof(PufPrimitiveNode))) != NULL) {
-        pufprimNode->type = type;
-        pufprimNode->apufPointer = apuf;
-        pufprimNode->dapufPointer = dapuf;
-        pufprimNode->xorapufPointer = xorapuf;
-        pufprimNode->ffapufsisoPointer = ffapufsiso;
-        pufprimNode->ffapufsimoPointer = ffapufsimo;
-        pufprimNode->ffapufmimoPointer = ffapufmimo;
-        pufprimNode->ffxorapufPointer = ffxorapuf;
-        pufprimNode->ipufPointer = ipuf;
-        pufprimNode->mpufPointer = mpuf;
-        pufprimNode->ropufPointer = ropuf;
-        pufprimNode->cpufaxPointer = cpufax;
-    }
-    else {
-        printf("Malloc Error: Cannot Create PUF Primitive node!\n");
-    }
-    return (pufprimNode);
-}*/
-
-/*BasicPrimitiveNode *createBasicPrimitiveNode(char *type) {//, char *arb, char *mux, char *d_chain
-    //comment
-    BasicPrimitiveNode *basicprimNode;
-    if((basicprimNode = (BasicPrimitiveNode*)malloc(sizeof(BasicPrimitiveNode))) != NULL) {
-        basicprimNode->type = type;
-        basicprimNode->dffPointer = dff;
-        basicprimNode->arbPointer = arb;
-        basicprimNode->muxPointer = mux;
-        basicprimNode->d_chainPointer = d_chain;
-    }
-    else {
-        printf("Malloc Error: Cannot Create Basic Primitive node!\n");
-    }
-    return (basicprimNode);
-}*/
-
 PrimitiveCallNode *createPrimitiveCallNode(char *primitive, char *input) {
     // printf("createPrimitiveCallNode\n");
     PrimitiveCallNode *primcall;
