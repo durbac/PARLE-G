@@ -45,20 +45,6 @@ typedef struct module_node {
     struct module_node* nextModule;
 }ModuleNode;
 
-typedef struct primitive_node {
-    // char* primitiveType;
-    struct puf_primitive_node *pufPrimitivePointer;
-    struct basic_primitive_node *basicPrimitivePointer;
-}PrimitiveNode;
-
-typedef struct puf_primitive_node {
-    char *type;
-}PufPrimitiveNode;
-
-typedef struct basic_primitive_node {
-    char *type;
-}BasicPrimitiveNode;
-
 typedef struct input_def_node {
     char *data_type;
     char *tuple;
@@ -814,6 +800,15 @@ ParallelStatementNode *createParallelStatementNode(AssignmentNode *parallelassig
 *   For PAC analysis: Model and algorithm selection
 */
 //function checked
+
+void printParam(Node* head) {
+    Node* temp = head;
+    while(temp) {
+        printf("temp->param = %s \t temp->coeff = %d \t temp->power = %d\n", temp->param, temp->coeff, temp->power);
+        temp = temp->next;
+    }
+}
+
 Node* handleInput(InputDefNode *input) {
     // printf("handleInput %d\n", input!=NULL);
     Node *newnode, *temp = NULL;
@@ -915,7 +910,7 @@ void printExpressionTree(ExpressionNode *exp) {
 }
 
 char* evaluateExpression(ExpressionNode *exp) {
-    printf("evaluateExpression %s %d %d\n", exp->op, exp->leftChild!=NULL, exp->rightChild!=NULL);
+    // printf("evaluateExpression %s %d %d\n", exp->op, exp->leftChild!=NULL, exp->rightChild!=NULL);
     // if(exp->leftChild)
     //     printf("op = %s lc = %s\n", exp->op, exp->leftChild->op);
     // if(exp->rightChild)
@@ -1028,8 +1023,6 @@ char* getModuleName(ModuleNode *module) {
     // }
 }
 
-//remove APUF from isPrimitive function
-// DC: 30/7/21
 int isPrimitive(ModuleNode *module) {
     // printf("isPrimitive %s\n", module->primitivePointer);
     if(module) {
@@ -1041,7 +1034,6 @@ int isPrimitive(ModuleNode *module) {
 }
 
 // map primitives to representations - primitive names are considered to be fixed
-// DC: change 30/7/21
 char* getRepresentation(char *type) {
     printf("\ngetRepresentation %s\n", type);
     char *rep;
@@ -1049,27 +1041,18 @@ char* getRepresentation(char *type) {
         rep = "LTF";
     else if(strcmp(type,"APUF")==0)
         rep = "DFA";
-    // if(strcmp(type,"DAPUF")==0) 
-    //     rep = "LTF";
-    // if(strcmp(type,"XORAPUF")==0) 
-    //     rep = "LTF";
-    // if(strcmp(type,"FFAPUF")==0) 
-    //     rep = "LTF_N";
-    // if(strcmp(type,"FFXORAPUF")==0) 
-    //     rep = "LTF_N";
-    // if(strcmp(type,"IPUF")==0) 
-    //     rep = "LTF_N";
-    // if(strcmp(type,"MPUF")==0) 
-    //     rep = "LTF";
     else if(strcmp(type,"ROPUF")==0)
         rep = "DL";
     else if(strcmp(type,"ARBITER")==0)   //to be checked at parent module 
         rep = "-";
     else if(strcmp(type,"SWITCH_2X2")==0)   //to be checked at parent module 
         rep = "-";
+    else if(strcmp(type,"MUX_2X1")==0)   //to be checked at parent module 
+        rep = "-";
     return rep;
 }
 
+// modify the use of this function call to incorporate the power returned instead of NS
 char* getNoiseSensitivity(char* rep) {
     // printf("getNoiseSensitivity %s\n", rep);
     char *ns_power;
@@ -1081,8 +1064,6 @@ char* getNoiseSensitivity(char* rep) {
 }
 
 //change representation depending on the input and output representations - this function assumes only one type of submodule in a given module
-// DC 30/7/21 - change to incorporate new results in other 
-// include DL composition - 26/11/22
 char* composeRepresentation(char* rep, char* it, char* ot) {
     printf("\ncomposeRepresentation rep = %s \t it = %s \t ot = %s\n", rep, it, ot);
     char* composed_rep;
@@ -1114,7 +1095,7 @@ char* composeRepresentation(char* rep, char* it, char* ot) {
 }
 
 
-//DC 10/8/21 - change function to incorporate new results in other PAC Settings
+//change function to incorporate new results in other PAC Settings
 /*
     This function returns the representation of composition of two PUF components. Changes representation depending on the input and output representations.
     This needs to be updated constantly as per new composition rules.
@@ -1159,13 +1140,14 @@ char* composeRepresentationGeneric(char* rep1, char* rep2, char* ot) {
     return composed_rep;
 }
 
-// dc: 27/11/22 - change function to incorporate modification of ns and not rep
+// change function to incorporate modification of ns and not rep
 /*
     This function returns the composition of noise sensitivity depending on the input and output transformation operations. 
     This needs to be updated as per new operations and composition rules. 
 */
-char* composeNoiseSensitivity(char* ns, char* rep, char* it, char* ot) {
+char* composeNoiseSensitivity(char* ns, char* rep, char* it, char* ot, Node* param) {
     printf("\ncomposeNoiseSensitivity ns = %s \t rep = %s \t it = %s \t ot = %s\n", ns, rep, it, ot);
+    printParam(param);
     char* composed_ns;
     if(it==NULL && ot==NULL) 
         return ns;
@@ -1249,8 +1231,9 @@ void printGraph() {
     // printf("\n======================end of printGraph=======================\n");
 }
 
+//checks statements of the form x = x + a[i]
 int checkSelfAssignment(AssignmentNode* assignment) {
-    printf("------checkSelfAssignment------\n"); //checks statements of the form x = x + a[i]
+    // printf("------checkSelfAssignment------\n"); 
     char* assignVar = assignment->assignmentName;
     ExpressionNode* assignmentExpression = assignment->expressionPointer;
     // printf("--------in expressionPointer block before %s --------\n", evaluateExpression(assignmentExpression));
@@ -1261,18 +1244,16 @@ int checkSelfAssignment(AssignmentNode* assignment) {
         char* op = assignmentExpression->op;
         
         // DC : CHECK HERE WHY WE ARE GETTING A[I][I] INSTEAD OF A[I]  solution : change precedence of operators in grmmar rules, check grammar for normal form
-        printf("-----in expressionPointer block %s %s %s---\n", leftOp, op, rightOp);
-        printf("%s %d %d %d %d %d %d \n", assignVar, strcmp(assignVar, leftOp)==0, strstr(rightOp,"[")!=NULL, strstr(rightOp,"]")!=NULL, strcmp(assignVar, rightOp)==0, strstr(leftOp,"[")!=NULL, strstr(leftOp,"]")!=NULL);
+        // printf("-----in expressionPointer block %s %s %s---\n", leftOp, op, rightOp);
+        // printf("%s %d %d %d %d %d %d \n", assignVar, strcmp(assignVar, leftOp)==0, strstr(rightOp,"[")!=NULL, strstr(rightOp,"]")!=NULL, strcmp(assignVar, rightOp)==0, strstr(leftOp,"[")!=NULL, strstr(leftOp,"]")!=NULL);
         
         //comapres whether the left or the right operand has an iterator
         if((strcmp(assignVar, leftOp)==0 && strstr(rightOp,"[")!=NULL && strstr(rightOp,"]")!=NULL) || (strcmp(assignVar, rightOp)==0 && strstr(leftOp,"[")!=NULL && strstr(leftOp,"]")!=NULL)) {
-            // gnode->inLoop = 1;
-            printf("********in same variable loop*********\n");
+            // printf("********in same variable loop*********\n");
             return 1;
         }
         else {
-            printf("in else inloop\n");
-            // gnode->inLoop = 0;
+            // printf("in else inloop\n");
             return 0;
         }                
     }
@@ -1320,7 +1301,7 @@ GraphNode* addGraphNodeWithValues(char* varName, char* nextVar, int outDeg, int 
 }
 
 void addGraphNode(AssignmentNode* assignment) {
-    printf("in addGraphNode %s, in loop = %d\n", assignment->assignmentName, (assignment->iteratorExpressionPointer!=NULL));
+    // printf("in addGraphNode %s, in loop = %d\n", assignment->assignmentName, (assignment->iteratorExpressionPointer!=NULL));
     GraphNode* gnode;
     GraphNode* itnode = headGraphNode;
     int nodeFound = 0;
@@ -1345,23 +1326,23 @@ void addGraphNode(AssignmentNode* assignment) {
                 gnode->inLoop = selfLoopExists;
             }
             if(headGraphNode==NULL) {
-                printf("First addGraphNode\n");
+                // printf("First addGraphNode\n");
                 headGraphNode = gnode;
             }
             else {
-                printf("Adding another addGraphNode\n");
+                // printf("Adding another addGraphNode\n");
                 gnode->nextGraphNode = headGraphNode;
                 headGraphNode = gnode;
             }    
         }
-        printf("Calling print from addGraphNode\n");
+        // printf("Calling print from addGraphNode\n");
         printGraphNode(gnode);
         // printGraph();
     }
 }
 
 void addEdge(AssignmentNode* assignment) {
-    printf("in addEdge lhs = %s \t inLoop = %d \t isExp = %d \t isPrimCall = %d \n", assignment->assignmentName, assignment->iteratorExpressionPointer!=NULL, assignment->expressionPointer!=NULL, assignment->primitiveCallPointer!=NULL);
+    // printf("in addEdge lhs = %s \t inLoop = %d \t isExp = %d \t isPrimCall = %d \n", assignment->assignmentName, assignment->iteratorExpressionPointer!=NULL, assignment->expressionPointer!=NULL, assignment->primitiveCallPointer!=NULL);
     char* assignVar = assignment->assignmentName;
 
     //primitive call output assigned to a variable - add edges of the input variables of the primitive to the primitive output
@@ -1390,7 +1371,7 @@ void addEdge(AssignmentNode* assignment) {
                         }
                         outEdges[gnode->outDeg-1] = assignVar;
                         gnode->adjList = outEdges;
-                        printf("Edge added to prim call output variable %s (%s -> %s)!!!! \n", assignVar, gnode->varName, assignVar);
+                        // printf("Edge added to prim call output variable %s (%s -> %s)!!!! \n", assignVar, gnode->varName, assignVar);
                         foundNode = 1;
                         break;
                     }
@@ -1407,7 +1388,7 @@ void addEdge(AssignmentNode* assignment) {
         // printf("assignment expression pointer block\n");
         // printExpressionTree(assignment->expressionPointer);
         char* expStr = evaluateExpression(assignment->expressionPointer);
-        printf("expStr = %s\t----------lhs = %d \t rhs = %d \n", expStr, assignment->expressionPointer->leftChild!=NULL, assignment->expressionPointer->rightChild!=NULL);
+        // printf("expStr = %s\t----------lhs = %d \t rhs = %d \n", expStr, assignment->expressionPointer->leftChild!=NULL, assignment->expressionPointer->rightChild!=NULL);
         
         //for statements with constant assignments - to-do: chnage - constants need not be only 0 or 1
         if(strcmp(expStr,"0")==0 || strcmp(expStr,"1")==0) { //dc_todo: change to all numbers from 0-9 using ascii
@@ -1422,7 +1403,7 @@ void addEdge(AssignmentNode* assignment) {
                 cgnode->visited = 0;
                 cgnode->isPrimitive = 0;
                 cgnode->inLoop = 0;
-                printf("Edge added: variable initialized (%s -> %s)!!!! \n", cgnode->varName, assignVar);
+                // printf("Edge added: variable initialized (%s -> %s)!!!! \n", cgnode->varName, assignVar);
                 if(headGraphNode==NULL) {
                     headGraphNode = cgnode;
                 }
@@ -1431,22 +1412,22 @@ void addEdge(AssignmentNode* assignment) {
                     headGraphNode = cgnode;
                 }
             }
-            printf("Calling print from addEdge->expression\n");
+            // printf("Calling print from addEdge->expression\n");
             printGraphNode(cgnode);
         }
         else if(assignment->expressionPointer->leftChild || assignment->expressionPointer->rightChild) { // when there is an operation on the rhs
             // operation in rhs of assignment operation
             char* operator = assignment->expressionPointer->op;
-            printf("in addEdge -----------------------------------------------------------------------------------------operator = %s\n", operator);
+            // printf("in addEdge -----------------------------------------------------------------------------------------operator = %s\n", operator);
             int foundNode = 0;
             GraphStartNode* startNode = headInitNode;
             while(startNode) {
                 GraphNode* gnode = startNode->initNode;
                 while(gnode) {         //gnode - nodes corresponding to the module input params
-                    printf("\t\tin gnode loop - %s\n", gnode->varName);
+                    // printf("\t\tin gnode loop - %s\n", gnode->varName);
                     // checking for an indexing operation
                     if(strcmp(operator,"[")==0 && strstr(expStr, gnode->varName)) {
-                        printf("----------------------found input_variable----------------------\n");
+                        // printf("----------------------found input_variable----------------------\n");
                         gnode->outDeg += 1;
                         char** outEdges = (char**)malloc(sizeof(char*)*(gnode->outDeg));
                         for(int i=0;i<gnode->outDeg-1;i++) {
@@ -1454,15 +1435,15 @@ void addEdge(AssignmentNode* assignment) {
                         }
                         outEdges[gnode->outDeg-1] = assignVar;
                         gnode->adjList = outEdges;
-                        printf("Edge added %s -> %s!!!! \n", gnode->varName, assignVar);
+                        // printf("Edge added %s -> %s!!!! \n", gnode->varName, assignVar);
                         foundNode = 1;
                         break;
                     }
                     else {
-                        printf("other operation !!!!! \n");
+                        // printf("other operation !!!!! \n");
                         if(assignment->expressionPointer->leftChild) {
                             char* leftExp = evaluateExpression(assignment->expressionPointer->leftChild);
-                            printf("leftExp = %s\n", leftExp);
+                            // printf("leftExp = %s\n", leftExp);
                         }
                     }
                     gnode = gnode->nextGraphNode;
@@ -1473,36 +1454,20 @@ void addEdge(AssignmentNode* assignment) {
             }
         }
         else{ //only single variable in rhs
-            printf("in addedge - variable in rhs assignemnt\n");
+            // printf("in addedge - variable in rhs assignemnt\n");
             //use the expressionNode to find the operands and operator
             // printExpressionTree(assignment->expressionPointer);
             printGraph();
             char* operator = assignment->expressionPointer->op;
-            printf("\n rhs variable = %s \t %s\n", operator, expStr);
+            // printf("\n rhs variable = %s \t %s\n", operator, expStr);
             int foundNode = 0;
             GraphStartNode* startNode = headInitNode;
             while(startNode) {
-                printf("\t\tstartnode\n");
+                // printf("\t\tstartnode\n");
                 GraphNode* gnode = startNode->initNode;
                 while(gnode) {         //gnode - nodes corresponding to the module input params
-                    printf("\n%s  ", gnode->varName);
-                    // copied portion from printGraph to compare
-                    // if(gnode->adjList!=NULL) {
-                    //     for(int j=0;j<gnode->outDeg;j++) {
-                    //         printf("-> %s", gnode->adjList[j]);
-                    //         GraphNode* inode = gnode;
-                    //         while(inode) {
-                    //             // printf("\nin inode loop \t inode->varName = %s \t gnode->adjList[%d] = %s\n", inode->varName, j, gnode->adjList[j]);
-                    //             if(strcmp(inode->varName, gnode->adjList[j])==0 && inode->visited==0) {
-                    //                 printf("adj[%d]\n", j);
-                    //                 printGraphNode(inode);
-                    //                 inode->visited=1;
-                    //             }
-                    //             inode = inode->nextGraphNode;
-                    //         }
-                    //     }
-                    // }
-                    printf("\t\tin gnode loop - %s\n", gnode->varName);
+                    // printf("\n%s  ", gnode->varName);
+                    // printf("\t\tin gnode loop - %s\n", gnode->varName);
                     if(strcmp(operator, gnode->varName)==0) { //dc: check for substring instead of exact match.. or better left part of [] in case of indexing
                         // printf("----------------------found input_variable----------------------\n");
                         gnode->outDeg += 1;
@@ -1512,7 +1477,7 @@ void addEdge(AssignmentNode* assignment) {
                         }
                         outEdges[gnode->outDeg-1] = assignVar;
                         gnode->adjList = outEdges;
-                        printf("Edge added %s -> %s!!!! \n", gnode->varName, assignVar);
+                        // printf("Edge added %s -> %s!!!! \n", gnode->varName, assignVar);
                         foundNode = 1;
                         break;
                     }
@@ -1631,15 +1596,14 @@ void createGraphStartNodes(InputDefNode* input) {
         }
         input = input->nextInputDef;    
     }
-    printf("After adding module input params : \n*******************************************************\nGraphStartNodes ");
-    //print start nodes
-    GraphStartNode* startNode = headInitNode;
-    while(startNode) {
-        printf("==> %s ", startNode->initNode->varName); //prints the name of the variable (vertex name)
-        startNode = startNode->nextStartNode;
-    }
-    printf("\n*******************************************************\nAFTER ADDING NODES CORREPSONDING TO INPUT PARAMETERS IN GRAPH \n\n");
-
+    // printf("After adding module input params : \n*******************************************************\nGraphStartNodes ");
+    // //print start nodes
+    // GraphStartNode* startNode = headInitNode;
+    // while(startNode) {
+    //     printf("==> %s ", startNode->initNode->varName); //prints the name of the variable (vertex name)
+    //     startNode = startNode->nextStartNode;
+    // }
+    // printf("\n*******************************************************\nAFTER ADDING NODES CORREPSONDING TO INPUT PARAMETERS IN GRAPH \n\n");
 }
 
 void createGraphNode() {
@@ -1653,7 +1617,7 @@ void createGraph() {
 /*
   nested function to identify structure - 
   function idenifies/picks the primitive calls in a module definition
-  adds new primitive to primList - which consists of all primitives and their respective module defn.
+  adds new primitive to primList - which consists of all primitives and their respective module definition.
 */
 
 void findSubmodulesSub(StatementNode* statement, PrimNode** primList) {
@@ -1668,34 +1632,45 @@ void findSubmodulesSub(StatementNode* statement, PrimNode** primList) {
     char* inputVar = NULL;
 
     while(statement) {
-        printf("in statement loop as = %d, ifs = %d, ser = %d, par = %d\n", (statement->assignmentPointer!=NULL), (statement->ifElsePointer!=NULL), (statement->serialPointer!=NULL), (statement->parallelPointer!=NULL));
+        // printf("in statement loop as = %d, ifs = %d, ser = %d, par = %d\n", (statement->assignmentPointer!=NULL), (statement->ifElsePointer!=NULL), (statement->serialPointer!=NULL), (statement->parallelPointer!=NULL));
         if(statement->assignmentPointer) { 
+            //check for primitive calls 
             if(statement->assignmentPointer->primitiveCallPointer) {
                 primName = statement->assignmentPointer->primitiveCallPointer->primitivePointer;
                 inputVar = statement->assignmentPointer->primitiveCallPointer->inputVariable;
                 // printf("in findSubmodulesSub base case %s(%s)\n", primName, inputVar);
-                PrimNode* prim = (PrimNode*)malloc(sizeof(PrimNode));
-                prim->primitiveName = primName;
-                prim->inputVariable = inputVar;
-                prim->modulePointer = NULL;
-                prim->rep = "-";
+                PrimNode* newPrim = (PrimNode*)malloc(sizeof(PrimNode));
+                newPrim->primitiveName = primName;
+                newPrim->inputVariable = inputVar;
+                newPrim->modulePointer = NULL;
+                newPrim->rep = "-";
+                newPrim->nextPrim = NULL;
 
+                // To find the corresponding module pointer and add to the PrimNode structure
                 ModuleNode* moduleIter = headModuleNode;
                 while(moduleIter) {
-                    // printf("----------in moduleiter while %s compared to %s \n", moduleIter->primitivePointer, primName);
+                    // printf("----------in moduleIter while %s compared to %s \n", moduleIter->primitivePointer, primName);
                     if(strcmp(moduleIter->primitivePointer, primName)==0) {
-                        prim->modulePointer = moduleIter;
+                        newPrim->modulePointer = moduleIter;
                         break;
                     }
                     moduleIter = moduleIter->nextModule;
                 }
-                prim->nextPrim = *primList;
-                *primList = prim;
-                printf("after adding %s(%s) to the primList\n", primName, inputVar);
+                
+                // add the new prim at the end of primList
+                // PrimNode* primListIter = *primList;
+                // while(primListIter && primListIter->nextPrim)
+                //     primListIter = primListIter->nextPrim;
+                // primListIter->nextPrim = newPrim;
+
+                // appending node at the beginning
+                newPrim->nextPrim = *primList;
+                *primList = newPrim;
+                printf("=================================after adding %s(%s) to the primList\n", primName, inputVar);
             }
-            // new functions added on 14 aug
-            addGraphNode(statement->assignmentPointer);
-            addEdge(statement->assignmentPointer);
+            // new functions added on 14 aug - not usign graph functions now
+            // addGraphNode(statement->assignmentPointer);
+            // addEdge(statement->assignmentPointer);
         }
         else if(statement->ifElsePointer) {
             StatementNode *st = statement->ifElsePointer->ifStatementPointer;
@@ -1740,12 +1715,12 @@ void findSubmodules(ModuleNode* module, PrimNode** primList) {    //wrapper of r
     // to identify the submodules, traverse the statements of the module
     statement = module->statementPointer;
     findSubmodulesSub(statement, primList); //called recursively
-    printf("after findSubmodulesSub of %s  SUBMODULES : \n ", module->primitivePointer);
-    PrimNode *prim = *primList;
-    while(prim) {
-        printf("====> %s (%s) \t module = %d\n", prim->primitiveName, prim->inputVariable, (prim->modulePointer!=NULL));
-        prim = prim->nextPrim;
-    }
+    // printf("after findSubmodulesSub of %s  SUBMODULES : \n ", module->primitivePointer);
+    // PrimNode *prim = *primList;
+    // while(prim) {
+    //     printf("====> %s (%s) \t module = %d\n", prim->primitiveName, prim->inputVariable, (prim->modulePointer!=NULL));
+    //     prim = prim->nextPrim;
+    // }
     printGraph();
     
     // printf("after while loop in find_submodule  %s\n", module->primitivePointer); 
@@ -2284,219 +2259,27 @@ char* identifyOutputTransformation (ModuleNode *module, ModuleNode *submod) {
     return output_trans_type;
 }
 
+// Ideally it should identify the connections using graph edges - currently tested for interpose compositions
 char* check_submodule_connection_2 (ModuleNode *module, ModuleNode *currentSubmodule, ModuleNode *nextSubmodule) {
     printf("check_submodule_connection_2\n");
-    return "";
+    return "interpose";
 }
 
 /**************************************************************************************** 
                         end of PUF identification functions 
 *****************************************************************************************/
-//basic function used in ICCAD 2020 version
-/*char* identify_module (ModuleNode *module) {
-    printf("-----identify_module %d %s\n", module!=NULL, module->primitivePointer);
-    char *type, *rep;//representation
-    Node *param;
-    if(isPrimitive(module)) {
-        // printf("********in isPrimitive if module = %s\n", module->primitivePointer);
-        type = getModuleName(module);   //module name
-        param = handleInput(module->inputDefPointer);
-        rep = getRepresentation(type);  //incase of switch, go up a module and decifer the representation
-        printf("in isPrimitve type = %s \t rep = %s\n", type, rep);
-        return rep; 
-    }
-    ModuleNode *submodule = find_submodule(module);
-    // printf("****after find_submodule %s\n", submodule->primitivePointer);
-    rep = identify_module(submodule);
-    printf("After identify_module %s -> %s\n", module->primitivePointer, rep);
-    if(strcmp(rep, "-")==0) {
-        // printf("\nreturning to parent module %s from sub %s \n", module->primitivePointer, submodule->primitivePointer);
-        // rep = identify_module(module);
-        char *it = identifyInputTransformation(module, submodule);
-        char *ot = identifyOutputTransformation(module, submodule);
-        // printf("it = %s \t ot = %s\n", it, ot);
-        type = getModuleName(module);
-        rep = compose_representation(rep, it, ot);
-        printf("----> type = %s \t rep = %s\n", type, rep);
-        return rep;
-    }
-
-    char *it = identifyInputTransformation(module, submodule);
-    char *ot = identifyOutputTransformation(module, submodule);
-    // printf("it = %s \t ot = %s\n", it, ot);
-    type = getModuleName(module);
-    rep = compose_representation(rep, it, ot);
-    printf("----> type = %s \t rep = %s\n", type, rep);
-    return rep;
-}*/
-
-// modified version implemented in Jan 2022
-/*char* identify_modules (ModuleNode *module) {
-    printf("============================= identify_modules %d %s\n", module!=NULL, module->primitivePointer);
-    char *type, *rep; //representation
-    Node *param;
-    if(isPrimitive(module)) {
-        type = getModuleName(module);   //module name
-        param = handleInput(module->inputDefPointer);
-        rep = getRepresentation(type);  //incase of switch, go up a module and decifer the representation
-        printf("in isPrimitve type = %s \t rep = %s\n", type, rep);
-        return rep; 
-    }
-    headInitNode = NULL;    //initializing headInitNode to NULL for every module
-    PrimNode* subModuleList = NULL;
-    findSubmodules(module, &subModuleList);
-    printf("--------------------after findSubmodules--------------------\n");
-    PrimNode* subModulesIter = subModuleList;
-
-    ModuleNode* subMod;
-    while(subModulesIter) {
-        subMod = subModulesIter->modulePointer; //pointer to the submodule
-
-        printf("-----------------------------------------------------\nmodule = %s \t submodule = %s\n-----------------------------------------------------\n", module->primitivePointer, subMod->primitivePointer);
-
-        rep = identify_modules(subMod);
-        printf("After identify_modules %s -> %s\n", module->primitivePointer, rep);
-
-        if(strcmp(rep, "-")==0) {
-            // printf("\nreturning to parent module %s from sub %s \n", module->primitivePointer, submodule->primitivePointer);
-            // rep = identify_module(module);
-            char *it = identifyInputTransformation(module, subMod);
-            char *ot = identifyOutputTransformation(module, subMod);
-            // printf("it = %s \t ot = %s\n", it, ot);
-            type = getModuleName(module);
-            rep = compose_representation(rep, it, ot);
-            printf("----> type = %s \t rep = %s\n", type, rep);
-            // return rep;
-        }
-
-        char *it = identifyInputTransformation(module, subMod);
-        char *ot = identifyOutputTransformation(module, subMod);
-        // printf("it = %s \t ot = %s\n", it, ot);
-        type = getModuleName(module);
-        rep = compose_representation(rep, it, ot);
-        printf("----> type = %s \t rep = %s\n", type, rep);
-        // return rep;
-        subModulesIter = subModulesIter->nextPrim;
-    }
-    return rep;
-}*/
-
-// modified version after Jan 2022
-//identifies the module and returns a suitable representation class
-/*char* identifyModulesCombined (ModuleNode *module) {
-    printf("-------- identifyModulesCombined %d %s----------\n", module!=NULL, module->primitivePointer);
-    char *type, *rep; //representation
-    Node *param;
-    if(isPrimitive(module)) {
-        type = getModuleName(module);   //module name
-        param = handleInput(module->inputDefPointer);
-        rep = getRepresentation(type);  //incase of switch, go up a module and decifer the representation
-        printf("in isPrimitve type = %s \t rep = %s\n", type, rep);
-        return rep; 
-    }
-
-    headInitNode = NULL;    //initializing headInitNode to NULL for every module
-    PrimNode* subModuleList = NULL;
-    findSubmodules(module, &subModuleList);
-
-    int numberOfSubModules = 0;
-    ModuleNode* subMod;
-    printf("--------------------after findSubmodules--------------------\n");
-    PrimNode* subModulesIter = subModuleList;
-
-    while(subModulesIter) {
-        if(!subModulesIter->modulePointer) { //the primitive module definition does not exists - it is either a primitive element or not defined
-            printf("in if while\n");
-            rep = getRepresentation(subModulesIter->primitiveName);
-            subModulesIter->rep = rep;
-            printf("rep=%s\n", rep);
-        }
-        else {
-            subMod = subModulesIter->modulePointer; //pointer to the submodule
-            printf("in while else ===>%s %d\n", subModulesIter->primitiveName, subMod!=NULL);
-            printf("-----------------------------------------------------\n");
-            printf("module = %s \t submodule = %s\n", module->primitivePointer, subMod->primitivePointer);
-            printf("-----------------------------------------------------\n");
-
-        // if(subModulesIter->visited==0) {
-            rep = identifyModulesCombined(subMod);
-            printf("in if After identify_modules %s -> %s\n", module->primitivePointer, rep);
-            subModulesIter->rep = rep;
-            // subModulesIter->visited = 1;
-        // }
-        // else {
-            // printf("in else subModulesIter->rep  = %s -> %s\n", subModulesIter->rep, rep);
-        // }
-        }
-        numberOfSubModules +=1;
-        subModulesIter = subModulesIter->nextPrim;
-    }
-
-    printf("In %s, numberOfSubModules = %d\n", module->primitivePointer, numberOfSubModules);
-    // char* it = identify_input_graph_transformation(module, subModuleList); // can access graph as it is global
-    // char* ot = identify_output_graph_transformation(module, subModuleList); // can access graph as it is global
-    if(numberOfSubModules==1) {
-        subModulesIter = subModuleList;
-        // rep = subModulesIter->rep;
-        char *it = identifyInputTransformation(module, subMod);
-        char *ot = identifyOutputTransformation(module, subMod);
-        printf("-------------------------------- numberOfSubModules = 1 \t\t it = %s \t ot = %s\n", it, ot);
-        type = getModuleName(module);
-        rep = compose_representation(rep, it, ot);
-        printf("numberOfSubModules = 1  ----> type = %s \t rep = %s\n", type, rep);
-        return rep;
-    }
-    /*else if(numberOfSubModules==2) {
-        //to check connection among modules - interposition, parallel, serial, ??
-        char *relation = check_submodule_connection(module, subModuleList);
-        char *rep1 = subModuleList->rep;//representation of first submodule
-        char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
-        printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
-        type = getModuleName(module);
-        rep = composeRepresentationGeneric(rep1, rep2, relation);
-        printf("----> type = %s \t rep = %s\n", type, rep);
-        return rep;
-    }
-    else if(numberOfSubModules>2) {
-        subModulesIter = subModuleList;
-        while(subModulesIter) {
-            ModuleNode* currentSubmodule = subModulesIter->modulePointer;
-            if(subModulesIter->nextPrim) {
-                ModuleNode* nextSubmodule = subModulesIter->nextPrim->modulePointer;
-
-                char *relation = check_submodule_connection_2(module, currentSubmodule, nextSubmodule);
-                char *rep1 = subModuleList->rep;//representation of first submodule
-                char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
-                printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
-                type = getModuleName(module);
-                rep = composeRepresentationGeneric(rep1, rep2, relation);
-                printf("----> type = %s \t rep = %s\n", type, rep);
-            }
-
-            subModulesIter = subModulesIter->nextPrim;
-        }
-        char *relation = check_submodule_connection(module, subModuleList);
-        char *rep1 = subModuleList->rep;//representation of first submodule
-        char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
-        printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
-        type = getModuleName(module);
-        rep = composeRepresentationGeneric(rep1, rep2, relation);
-        printf("----> type = %s \t rep = %s\n", type, rep);
-        return rep;
-    }*/
-    
-    // rep = composeRepresentationGeneric(subModuleList, it, ot);
-    //return rep;
-//}
 
 char* identifyModule (ModuleNode *module, int PACSetting) {
     printf("-------- identifyModule %d %s \t PACSetting = %d----------\n", module!=NULL, module->primitivePointer, PACSetting);
     char *type, *rep; //representation
     char *ns; //Noise sensitivity
     Node *param;
+
+    //check for the most primitive module
     if(isPrimitive(module)) {
         type = getModuleName(module);   //module name
-        param = handleInput(module->inputDefPointer);
+        param = handleInput(module->inputDefPointer);   //dc: send param to upper/parent modules for composition
+        
         if(PACSetting==0) {
             rep = getRepresentation(type);  //incase of switch, go up a module and decifer the representation
             printf("in isPrimitve type = %s \t rep = %s\n", type, rep);
@@ -2508,7 +2291,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
             return ns; 
         }
     }
-
+    // check for upper modules - make a list of submodules
     PrimNode* subModuleList = NULL;
     findSubmodules(module, &subModuleList);
     int numberOfSubModules = 0;
@@ -2516,9 +2299,14 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
     printf("--------------------after findSubmodules--------------------\n");
     PrimNode* subModulesIter = subModuleList;
 
+    // iterate through the submodules of the given module 
     while(subModulesIter) {
-        if(!subModulesIter->modulePointer) { //the primitive module definition does not exists - it is either a primitive element or not defined
-            printf("in if while subModulesIter->primitiveName = %s\n", subModulesIter->primitiveName);
+        printf("numberOfSubModules: %d    subModulesIter : %s\n", numberOfSubModules, subModulesIter->primitiveName);
+
+        //the primitive module definition does not exists - it is either a primitive element or not defined
+        if(!subModulesIter->modulePointer) { 
+            printf("modulePointer not available - Submodule not defined as it is primitive\n");
+            printf("subModulesIter->primitiveName = %s\n", subModulesIter->primitiveName);
             rep = getRepresentation(subModulesIter->primitiveName);
             ns = getNoiseSensitivity(subModulesIter->primitiveName);
             subModulesIter->rep = rep;
@@ -2533,20 +2321,22 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
             }
         }
         else {
+            printf("modulePointer available!!\n");
             subMod = subModulesIter->modulePointer; //pointer to the submodule
-            printf("in while else ===>%s %d\n", subModulesIter->primitiveName, subMod!=NULL);
+            printf("in while ===> %s %d\n", subModulesIter->primitiveName, subMod!=NULL);
             printf("-----------------------------------------------------\n");
             printf("module = %s \t submodule = %s\n", module->primitivePointer, subMod->primitivePointer);
             printf("-----------------------------------------------------\n");
         // if(subModulesIter->visited==0) { // remove visited condition as the module might be visited twice if parent module is not learnable in the DI setting
+            
+            char* result = identifyModule(subMod, PACSetting);
             if(PACSetting==0) {
-                rep = identifyModule (subMod, PACSetting);
-                printf("in DI PACSetting After identifyModule %s -> rep = %s\n", module->primitivePointer, rep);
-                subModulesIter->rep = rep;
+                subModulesIter->rep = result;
                 subModulesIter->ns = NULL;
+                printf("in DI PACSetting After identifyModule %s -> rep = %s\n", module->primitivePointer, subModulesIter->rep);
             }
             else if(PACSetting==1) {
-                subModulesIter->ns = identifyModule (subMod, PACSetting);
+                subModulesIter->ns = result;
                 printf("in DD PACSetting After identifyModule %s -> ns = %s\n", module->primitivePointer, subModulesIter->ns);
             }
             subModulesIter->visited = 1;
@@ -2558,7 +2348,9 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
         numberOfSubModules +=1;
         subModulesIter = subModulesIter->nextPrim;
     }
+
     printf("In %s, numberOfSubModules = %d\n", module->primitivePointer, numberOfSubModules);
+    type = getModuleName(module);
     if(numberOfSubModules==1) {
         subModulesIter = subModuleList;
         subMod = subModulesIter->modulePointer;
@@ -2566,23 +2358,41 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
         ns = subModulesIter->ns;
         char *it = identifyInputTransformation(module, subMod);
         char *ot = identifyOutputTransformation(module, subMod);
-        printf("-------------------------------- numberOfSubModules = 1 \t\t it = %s \t ot = %s\n", it, ot);
-        type = getModuleName(module);
+        printf("-----------------------type = %s \t numberOfSubModules = 1 \t it = %s \t ot = %s\n", type, it, ot);
         if(PACSetting==0) {
             rep = composeRepresentation(rep, it, ot);
-            printf("in DI Setting numberOfSubModules = 1 ----> type = %s \t composed rep = %s\n", type, rep);
+            printf("in DI Setting \t composed rep = %s\n", rep);
             return rep;    
         }
         else if(PACSetting==1) {
-            ns = composeNoiseSensitivity(ns, rep, it, ot);
-            printf("in DD Setting numberOfSubModules = 1 ----> type = %s \t composed rep = %s\n", type, rep);
+            ns = composeNoiseSensitivity(ns, rep, it, ot, param);
+            printf("in DD Setting \t composed rep = %s\n", rep);
             return ns;
         }
     }
+    //generalize it to >=2 submodules by considering 2 at a time 
     else if(numberOfSubModules==2) {
-        printf("-------------------------------- numberOfSubModules = 2\n");// \t\t it = %s \t ot = %s\n", it, ot);
+        printf("-----------------------type = %s \t numberOfSubModules = %d\t %d\n", type, numberOfSubModules, subModuleList!=NULL);
         subModulesIter = subModuleList;
-        while(subModulesIter) {
+        printf("subModulesIter = %s\n", subModulesIter->primitiveName);
+        ModuleNode* currentSubmodule = subModulesIter->modulePointer;
+        // if()
+        ModuleNode* nextSubmodule = subModulesIter->nextPrim->modulePointer;
+        char *relation = check_submodule_connection_2(module, currentSubmodule, nextSubmodule);
+        char *rep1 = subModuleList->rep;            //representation of first submodule
+        char *rep2 = subModuleList->nextPrim->rep;  //representation of second submodule
+        printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
+        // printf("-- rep1 = %s \t rep2 = %s \n", rep1, rep2); //, relation);
+        type = getModuleName(module);
+        rep = composeRepresentationGeneric(rep1, rep2, relation);
+        printf("----> type = %s \t rep = %s\n", type, rep);
+        if(PACSetting==0) {
+            return rep;
+        }
+        else 
+            return rep; // change to NS
+
+        /*while(subModulesIter) {
             ModuleNode* currentSubmodule = subModulesIter->modulePointer;
             if(subModulesIter->nextPrim) {
                 ModuleNode* nextSubmodule = subModulesIter->nextPrim->modulePointer;
@@ -2598,7 +2408,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
             }
 
             subModulesIter = subModulesIter->nextPrim;
-        }
+        }*/
         // char *relation = check_submodule_connection(module, subModuleList);
         // char *rep1 = subModuleList->rep;//representation of first submodule
         // char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
@@ -2609,6 +2419,7 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
         // return rep;
         // return "";
     }
+
 
 }
 
@@ -2700,7 +2511,7 @@ Node* modifyParam (ModuleNode *module, char* rep, Node* param) {
         }
         var->next = newnode;
     }
-    else if(strcmp(module->primitivePointer, "FFAPUF")==0) {
+    /*else if(strcmp(module->primitivePointer, "FFAPUF")==0) {
         Node *var = modParam;
         char *k;
         while(var) {
@@ -2736,91 +2547,6 @@ Node* modifyParam (ModuleNode *module, char* rep, Node* param) {
             var = var->next;
         }
         var->next = newnode;
-    }
-    /*else if(strcmp(module->primitivePointer, "FFXORAPUF")==0) {
-        Node *var = modParam;
-        char *k;
-        while(var) {
-            if(strcmp(var->param,"k")==0) {
-                k = var->param;
-                if(var->power != 1) {
-                    k = strcat(strcat(strcat(k, "^("),(var->power + '0')),")");
-                }
-                if(var->coeff != 1) {
-                    k = strcat(strcat(var->coeff, "*"),k);
-                }
-                var->param = k;
-            }
-            var = var->next;
-        }
-
-        var = modParam;
-
-        //append m node at end
-        Node *newnode;
-        if((newnode = (Node*)malloc(sizeof(Node))) != NULL) {
-            newnode->param = "m";
-            newnode->coeff = 1;
-            newnode->power = 1;
-        }
-        else {
-            printf("Malloc Error: Cannot Create param node!\n");
-        }
-        while(var->next) {
-            var = var->next;
-        }
-        var->next = newnode;
-    }
-    else if(strcmp(module->primitivePointer, "MUXPUF")==0) {
-        Node *var = modParam;
-        char *k;
-        while(var) {
-            if(strcmp(var->param,"k")==0) {
-                k = var->param;
-                if(var->power != 1) {
-                    k = strcat(strcat(strcat(k, "^("),(var->power + '0')),")");
-                }
-                if(var->coeff != 1) {
-                    k = strcat(strcat(var->coeff, "*"),k);
-                }
-                var->param = k;
-            }
-            var = var->next;
-        }
-    }
-    else if(strcmp(module->primitivePointer, "IPUF")==0) {
-        Node *var = modParam;
-        char *k;
-        while(var) {
-            if(strcmp(var->param,"k")==0) {
-                k = var->param;
-                if(var->power != 1) {
-                    k = strcat(strcat(strcat(k, "^("),var->power),")");
-                }
-                if(var->coeff != 1) {
-                    k = strcat(strcat(var->coeff, "*"),k);
-                }
-                var->param = k;
-            }
-            var = var->next;
-        }
-    }
-    else if(strcmp(module->primitivePointer, "ROPUF")==0) {
-        Node *var = modParam;
-        char *k;
-        while(var) {
-            if(strcmp(var->param,"k")==0) {
-                k = var->param;
-                if(var->power != 1) {
-                    k = strcat(strcat(strcat(k, "^("),var->power),")");
-                }
-                if(var->coeff != 1) {
-                    k = strcat(strcat(var->coeff, "*"),k);
-                }
-                var->param = k;
-            }
-            var = var->next;
-        }
     }*/
     return modParam;
 }
@@ -2859,176 +2585,6 @@ int checkPoly (char *var) {
         return 0;
 }
 
-/*void computeSampleComplexity (Node *param, char *model, int PACSetting) {
-    printf("computeSampleComplexity \t rep = %s \n", model);
-    Node *var = param;
-    Node *n = NULL, *m = NULL, *k = NULL, *ff_in = NULL, *ff_out = NULL, *s = NULL;//, *eta;
-    while(var) {
-        // printf("in while var = %s\n", var->param);
-        if(strcmp(var->param,"n")==0) {
-            n = var;
-            // printf("%s\n", n->param);
-        }
-        else if(strcmp(var->param,"k")==0) {
-            k = var;
-            // printf("%s\n", k->param);
-        }
-        else if(strcmp(var->param,"m")==0) {
-            m = var;
-            // printf("%s\n", m->param);
-        }
-        else if(strcmp(var->param,"ff_in")==0) {
-            ff_in = var;
-            // printf("%s\n", ff_in->param);
-        }
-        else if(strcmp(var->param,"ff_out")==0) {
-            ff_out = var;
-            // printf("%s\n", ff_out->param);
-        }
-        else if(strcmp(var->param,"s")==0) {
-            s = var;
-            // printf("%s\n", s->param);
-        }
-        else if(strcmp(var->param,"kl")==0) {//for interpose
-            k = var;
-            // printf("%s\n", s->param);
-        }
-        var = var->next;
-    }
-    // printf("after reading variables\n");
-    if(PACSetting==0) {
-        if(strcmp(model, "DFA")==0) {
-            //parameter to be checked = no of states
-            //if no of states is poly then puf is PAC Learnable
-            char* n_states;
-            n_states = strcat(strcat(strcat(strcat(strcat(n->param, "*"), "("), m->param), "+1)"), "^2");
-            printf("n_states = %s\n", n_states);
-            if(checkPoly(n_states)) {
-                printf("---------------------------------------------------------------\nPUF is PAC Learnable using DFA Representation\n---------------------------------------------------------------\n\n");
-            }
-            else {
-                
-                printf("---------------------------------------------------------------\nPUF is not PAC Learnable under this representation\n---------------------------------------------------------------\n\n");
-            }
-        }
-        else if(strcmp(model, "LTF")==0) {
-            //parameter to be checked = mistake bound = R/e
-            //if R(input size) is poly and 
-            //e(epsilon with or without the noise coefficient) is poly then puf is PAC Learnable
-            printf("In LTF\n");
-            char *open = "(";
-            char n_mis_num[100], n_mis_denom[100];
-            strcpy(n_mis_num, open);
-            // strcpy(n_mis_denom, open);
-            strcat(strcat(strcat(strcat(n_mis_num, n->param), "+1)^"), k->param), "^2");
-
-            strcat(n_mis_denom, "e)^2");
-            // n_mis = len;
-            printf("n_mis_num = %s\n", n_mis_num);
-            if(checkPoly(n_mis_num)) {
-                printf("---------------------------------------------------------------\nPUF is PAC Learnable using LTF Represenatation\n---------------------------------------------------------------\n\n");
-            }
-            else {
-                
-                printf("---------------------------------------------------------------\nPUF is not PAC Learnable under this representation\n---------------------------------------------------------------\n\n");
-            }
-        }
-        else if(strcmp(model,"LTF_N")==0) {
-            //parameter to be checked = mistake bound = R/e'
-            //if R(input size) is poly and e' is poly
-            //e'(epsilon with the noise coefficient) is poly then puf is PAC Learnable
-            printf("in ltf_n else\n");
-            char *open = "(";
-            // strcpy(open,"(");
-            char* len;
-            char* bias;//[100];// = NULL;
-            char* eq;//[100];//term within tan inv
-            bias = (char*)malloc(sizeof(1000));
-            eq = (char*)malloc(sizeof(1000));
-            if(s!=NULL) {
-                // printf("in interpose\n");
-                strcat(eq, "(");
-                strcat(strcat(strcat(strcat(strcat(strcat(strcat(eq, "(2*"), s->param), "-1)/(2*"), n->param), "+1 - 2*"), s->param), "))^(1/2)");
-                // eq = strcat(strcat(strcat(strcat(strcat(eq,"(2*"), s->param), "-1)/(2*"), n->param), "+1 - 2*");//, s->param), "))^(1/2)");
-                // eq = strcat(strcat(strcat(strcat(strcat(strcat(strcat(eq,"(2*"), s->param), "-1)/(2*"), n->param), "+1 - 2*"), s->param), "))^(1/2)");
-                printf("eq = %s \t %s \n", eq, s->param);
-            }
-            else if(ff_in!=NULL && ff_out!=NULL) {
-                // printf("in ff \n");
-                // printf("eq = %s %s\n", eq, open);
-                strcat(eq,"(");
-                // eq = strcat(strcat(open,"(2*"), ff_out->param);
-                strcat(strcat(strcat(strcat(strcat(strcat(strcat(eq,"(2*"), ff_out->param), " - 1)/(2*"), n->param), " + 1 - 2*"), ff_out->param), "))^(1/2)");
-                printf("eq = %s \n", eq);
-            }
-            if(k==NULL) {
-                // printf("in ffapuf k\n");
-                strcpy(bias,"1-");
-                // printf("bias = %s\n", bias);
-                strcat(strcat(strcat(bias,"(2/pi)arctan("), eq ), ")");
-                // printf("bias = %s\n", bias);
-            }
-            else {
-                // printf("in k else bias = %s \n", bias);
-                // bias=  NULL;
-                // strcpy(bias,"(");
-                bias = eq;
-                // printf("eq = %s\n", eq);
-                // bias = strcat(strcat(strcat(strcat(strcat(strcat(bias,"2^("),k->param),")(1/2-(2/pi)arctan"), eq ), ")^"), k->param);
-                // printf("bias = %s\n", bias);
-            }
-            char* e;
-            // char* n_mis;
-            // strcat(strcat(len, "/"), e);
-            printf("bias = %s \n", bias);
-            if(checkPoly(bias)) {
-                printf("---------------------------------------------------------------\nPUF is PAC Learnable using LTF with Noise Represenatation\n---------------------------------------------------------------\n\n");
-            }
-            else {
-                
-                printf("---------------------------------------------------------------\nPUF is not PAC Learnable under this representation\n---------------------------------------------------------------\n\n");
-            }
-        }
-        else if(strcmp(model, "DL")==0) {
-            //parameter to be checked = size of DL measured in bits
-            //if size is poly then puf is PAC Learnable
-            char *open;
-            strcpy(open,"(");
-            char *len = strcat(strcat(open, n->param), "-1)");
-            // printf("len = %s \t open  %s n = %s \n", len, open, n->param);//, strcat(open, len));
-            char *bits;
-            bits = strcat(strcat(strcat(len, "log("), n->param), "-1)");
-            // printf("bits = %s \t open = %s\n", bits, open);
-
-            if(checkPoly(bits)) {
-                printf("---------------------------------------------------------------\nPUF is PAC Learnable using Decision List Represenatation\n---------------------------------------------------------------\n\n");
-            }
-            else {
-                
-                printf("---------------------------------------------------------------\nPUF is not PAC Learnable under this representation\n---------------------------------------------------------------\n\n");
-            }
-        }
-    }
-    else if(PACSetting==1) {
-
-    }
-    else if(PACSetting==2) {
-        if(strcmp(model, "LTF")==0) {
-            char* dimension = n->param;
-            char* VC_dim;
-            strcpy(VC_dim, dimension);
-            strcpy(VC_dim, "+1)");
-            printf("VC_Dim = %s\n", VC_dim);
-            if(checkPoly(VC_dim)) {
-                printf("---------------------------------------------------------------\nPUF is PAC Learnable using LTF Represenatation\n---------------------------------------------------------------\n\n");
-            }
-            else {
-                printf("---------------------------------------------------------------\nPUF is not PAC Learnable under this representation\n---------------------------------------------------------------\n\n");
-            }
-        }
-    }
-
-}*/
 
 void computeSampleComplexity (Node *param, int PACSetting, char *model, char* ns) {
     printf("computeSampleComplexity \t rep = %s \t PACSetting = %d \n", model, PACSetting);
@@ -3182,9 +2738,9 @@ void computeSampleComplexity (Node *param, int PACSetting, char *model, char* ns
             }
         }
     }
-    else if(PACSetting==1) {
+    /*else if(PACSetting==1) {
 
-    }
+    }*/
     else if(PACSetting==2) {  //done
         if(strcmp(model, "LTF")==0) {
             char* dimension = n->param;
@@ -3203,9 +2759,9 @@ void computeSampleComplexity (Node *param, int PACSetting, char *model, char* ns
 
 }
 
-void computeNoiseSensitivity (Node* param, char* model) {
+/*void computeNoiseSensitivity (Node* param, char* model) {
     
-}
+}*/
 
 // void computeSampleComplexityFromVCDimension (Node* param, char* model) {
 // }
@@ -3235,8 +2791,6 @@ void extraxtPACComplexityFromPUFGObjectModel() {
 
     Node* param = handleInput(inputdefnode);
     printf("--------------------after handleInput--------------------\n");
-    // char* rep = identify_modules(currentModuleNode);
-    // char* rep = identifyModulesCombined(currentModuleNode);
 
     int PACSetting = 0; //PACSetting = 0 for distribution indpendent and 1 for uniform distribution and 2 for VC dimension
     char* rep = identifyModule(currentModuleNode, PACSetting);
@@ -3251,33 +2805,6 @@ void extraxtPACComplexityFromPUFGObjectModel() {
     // compute_sample_complexity(param, rep);
     computeSampleComplexity(param, PACSetting, rep, NS);
 
-/*  // to be removed - dec 2
-    // representation class found in distribution independent setting
-    if(PACSetting==0 && rep!=NULL) {
-        param = modifyParam(currentModuleNode, rep, param);
-        computeSampleComplexity(param, rep);
-        printf("after computeSampleComplexity\n");
-    }
-    else{
-        printf("PUF construction is not learnable in the distribution independent setting. Let's try in the distribution dependent setting (Fourier based attacks. \n");
-    }
-    //composed representation learnabel in distribution dependent setting
-    if(PACSetting==1 & rep!=NULL){
-        char* reps = identifySubmodules(currentModuleNode);
-        char* NS_all = computeNoiseSensitivity(currentModuleNode, reps);
-        param = modifyNS(currentModuleNode, rep, param);
-        param = modifyParam(currentModuleNode, rep, param);
-        computeFourierSampleComplexity(param, rep, NS_all);
-        printf("after computeFourierSampleComplexity\n");
-    }
-    else {
-        printf("PUF construction is not learnable in the distribution dependent setting. \n");
-    }
-    if(PACSetting==2 & rep!=NULL) {
-        param = modifyParam(currentModuleNode, rep, param);
-        computeSampleComplexityFromVCDimension(param, rep, VC_dim);
-        printf("after computeSampleComplexityFromVCDimension\n");
-    }*/
 }
 
 
