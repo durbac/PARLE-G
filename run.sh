@@ -1,13 +1,13 @@
-# echo "---------------------------------------------------------------" 
-# echo "                           APUF" #ne in flatten code - basic modules - no transition
-# echo "---------------------------------------------------------------" 
-# lex puf_g.l
-# yacc -d puf_g_flatten.y
-# cc -c lex.yy.c y.tab.c
-# cc -o puf_g.out lex.yy.o y.tab.o -ll
-#  ./puf_g.out puf_designs/test_apuf.pufg 
+echo "---------------------------------------------------------------" 
+echo "                           APUF" 
+echo "---------------------------------------------------------------" 
+lex puf_g.l
+yacc -d puf_g_flatten.y
+cc -c lex.yy.c y.tab.c
+cc -o puf_g.out lex.yy.o y.tab.o -ll
+ ./puf_g.out puf_designs/test_apuf.pufg 
 
-echo "---------------------------------------------------------------" # 
+echo "---------------------------------------------------------------"  
 echo "                           XORAPUF"
 echo "---------------------------------------------------------------" 
 lex puf_g.l
@@ -43,14 +43,14 @@ cc -o puf_g.out lex.yy.o y.tab.o -ll
 # cc -o puf_g.out lex.yy.o y.tab.o -ll
 #  ./puf_g.out puf_designs/test_mpuf.pufg 
 
-# echo "---------------------------------------------------------------" 
-# echo "                           IPUF"
-# echo "---------------------------------------------------------------" 
-# lex puf_g.l
-# yacc -d puf_g_flatten.y
-# cc -c lex.yy.c y.tab.c
-# cc -o puf_g.out lex.yy.o y.tab.o -ll
-#  ./puf_g.out puf_designs/test_ipuf.pufg 
+echo "---------------------------------------------------------------" 
+echo "                           IPUF"
+echo "---------------------------------------------------------------" 
+lex puf_g.l
+yacc -d puf_g_flatten.y
+cc -c lex.yy.c y.tab.c
+cc -o puf_g.out lex.yy.o y.tab.o -ll
+ ./puf_g.out puf_designs/test_ipuf.pufg 
 
 # echo "---------------------------------------------------------------" #ne - fixed but sample complexity check
 # echo "                           DAPUF"
@@ -61,14 +61,14 @@ cc -o puf_g.out lex.yy.o y.tab.o -ll
 # cc -o puf_g.out lex.yy.o y.tab.o -ll
 #  ./puf_g.out puf_designs/test_dapuf_1.pufg 
 
-# echo "---------------------------------------------------------------" #ne
-# echo "                           ROPUF"
-# echo "---------------------------------------------------------------" 
-# lex puf_g.l
-# yacc -d puf_g_flatten.y
-# cc -c lex.yy.c y.tab.c
-# cc -o puf_g.out lex.yy.o y.tab.o -ll
-#  ./puf_g.out puf_designs/test_ropuf.pufg 
+echo "---------------------------------------------------------------" #ne
+echo "                           ROPUF"
+echo "---------------------------------------------------------------" 
+lex puf_g.l
+yacc -d puf_g_flatten.y
+cc -c lex.yy.c y.tab.c
+cc -o puf_g.out lex.yy.o y.tab.o -ll
+ ./puf_g.out puf_designs/test_ropuf.pufg 
 
 # echo "---------------------------------------------------------------" #ne - fixed but sample complexity check
 # echo "                           REC-DAPUF"

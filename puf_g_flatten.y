@@ -139,7 +139,6 @@ typedef struct primNode {
     struct primNode* nextPrim;
 }PrimNode;
 
-//dc: 14jan
 typedef struct adjacencyNode {
     char* varName;
     char* index; 
@@ -175,7 +174,6 @@ ModuleNode *headModuleNode;
 Node **headnode = NULL; //for storing the parameters
 GraphNode* headGraphNode = NULL;    // graph of a given module
 GraphStartNode* headInitNode = NULL;
-// stackDS *stackTopPointer;
 
 /*****************************************************************
  * Global Function Declaration Section 
@@ -195,9 +193,6 @@ unsigned int timestamp(void) {
 
 //Intermediate data-structure functions
 ModuleNode *createModuleNode(char*, StatementNode*, InputDefNode*, InputDefNode*);
-// PrimitiveNode *createPrimitiveNode(PufPrimitiveNode*, BasicPrimitiveNode*);
-// PufPrimitiveNode *createPufPrimitiveNode(char*);
-// BasicPrimitiveNode *createBasicPrimitiveNode(char*);
 InputDefNode *createInputDefNode(char*, char*, InputDefNode*);
 PrimitiveCallNode *createPrimitiveCallNode(char*, char*);
 StatementNode *createStatementNode(AssignmentNode*, IfElseStatementNode*, SerialStatementNode*, ParallelStatementNode*);
@@ -218,9 +213,6 @@ void extraxtPACComplexityFromPUFGObjectModel();
 %union{
     char *string;
     struct module_node *moduleNodePointer;
-    // struct primitive_node *primitiveNodePointer;
-    // struct puf_primitive_node *pufPrimitiveNodePointer;
-    // struct basic_primitive_node *basicPrimitiveNodePointer;
     struct input_def_node *inputDefNodePointer;
     struct primitive_call_node *primitiveCallNodePointer;
     struct statement_node *statementNodePointer;
@@ -261,11 +253,6 @@ void extraxtPACComplexityFromPUFGObjectModel();
 %token <string> MUX21
 %token <string> DELAY_CHAIN
 %token <string> ARBITER
-
-
-// %token <string> AND
-// %token <string> OR
-// %token <string> NOT
 
 
 %token <string> BOOL_AND // &
@@ -317,9 +304,6 @@ void extraxtPACComplexityFromPUFGObjectModel();
 
 %type <moduleNodePointer> top
 %type <moduleNodePointer> module
-// %type <primitiveNodePointer> primitive
-// %type <pufPrimitiveNodePointer> puf_primitive
-// %type <basicPrimitiveNodePointer> basic_primitive
 %type <inputDefNodePointer> input_def
 %type <inputDefNodePointer> output_def
 %type <primitiveCallNodePointer> primitive_call
@@ -369,42 +353,6 @@ module:
             }
         }
         ;
-
-/*primitive: 
-            puf_primitive
-            {
-                $$ = createPrimitiveNode($1, NULL);
-            }
-          | basic_primitive
-            {
-                $$ = createPrimitiveNode(NULL, $1);
-            }
-            ;
-
-puf_primitive:
-                APUF
-                {
-                    $$ = createPufPrimitiveNode($1);
-                }
-                ;
-
-basic_primitive: D_FLIPFLOP
-                {
-                    $$ = createBasicPrimitiveNode($1);
-                }
-              | ARBITER
-                {
-                    $$ = createBasicPrimitiveNode($1);
-                }
-              | MUX21
-                {
-                    $$ = createBasicPrimitiveNode($1);
-                }
-              | DELAY_CHAIN
-                {
-                    $$ = createBasicPrimitiveNode($1);
-                }
-                ;*/
 
 input_def:  data_type tuple delimeter input_def 
             {
@@ -1018,7 +966,6 @@ void printExpressionTree(ExpressionNode *exp) {
     }
 }
 
-
 char* evaluateExpression(ExpressionNode *exp) {
     printf("evaluateExpression %s %d %d\n", exp->op, exp->leftChild!=NULL, exp->rightChild!=NULL);
     // if(exp->leftChild)
@@ -1218,68 +1165,82 @@ char* composeRepresentation(char* rep, char* it, char* ot) {
     return composed_rep;
 }
 
-//changes representation depending on the input and output representations
-//DC 10/8/21 - change to incorporate new results in other 
 
+//DC 10/8/21 - change function to incorporate new results in other PAC Settings
 /*
-  This function returns the representation of composition of two PUF components
+    This function returns the representation of composition of two PUF components. Changes representation depending on the input and output representations.
+    This needs to be updated constantly as per new composition rules.
 */
 char* composeRepresentationGeneric(char* rep1, char* rep2, char* ot) {
     printf("\ncomposeRepresentationGeneric rep1 = %s \t rep2 = %s \t ot = %s\n", rep1, rep2, ot);
     char* composed_rep = "-";
     // add case for other output operations
     if(strcmp(ot, "xor")==0) {
-        if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0) && (strcmp(rep2, "DFA")==0 || strcmp(rep2, "LTF")==0 || strcmp(rep2, "LTF_N")==0)) 
+        if(strcmp(rep1, "DFA")==0  && strcmp(rep2, "DFA")==0) // XOR composition of DFA is DFA
+            composed_rep = "DFA";
+        else if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0) && (strcmp(rep2, "DFA")==0 || strcmp(rep2, "LTF")==0 || strcmp(rep2, "LTF_N")==0))  // XOR composition of DFA and LTF is LTF
             composed_rep = "LTF_N";
-        if(strcmp(rep1, "LTF_N")!=0 && strcmp(rep2, "LTF_N")!=0)
+        else if(strcmp(rep1, "LTF_N")!=0 && strcmp(rep2, "LTF_N")!=0) //XOR composition of LTFs is LTF (without noise)
             composed_rep = "LTF";
-        if(strcmp(rep1, "DL")!=0 && strcmp(rep2, "DL")!=0)  //compose two DL representations to DL
+        else if(strcmp(rep1, "DL")!=0 && strcmp(rep2, "DL")!=0)  //XOR composition of DLs is DL
             composed_rep = "DL";
     }
-    //input operations - interpose - DFA is used for APUF
+    else {  //other output combiner functions
+        if(strcmp(rep1, "DL")!=0 && strcmp(rep2, "DL")!=0) //any output composition of DL results in a DL
+            composed_rep = "DL";
+        if(strcmp(rep1, "DFA")!=0 && strcmp(rep2, "DFA")!=0) //any output composition of DL results in a DL
+            composed_rep = "DFA";
+        // cannot say the same for LTFs
+    }
+    //input transformation operations - interpose - DFA is used for APUF
     if(strcmp(ot, "interpose")==0) {
         if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0) && (strcmp(rep2, "DFA")==0 || strcmp(rep2, "LTF")==0 || strcmp(rep2, "LTF_N")==0)) 
             composed_rep = "LTF_N";
     }
     //input operations - feed-forward - DFA is used for APUF
-    if(strcmp(ot, "feed-forward")==0) {
+    else if(strcmp(ot, "feed-forward")==0) {
         if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0)) 
             composed_rep = "LTF_N";
     }
     //input operations - recurrence - DFA is used for APUF
-    if(strcmp(ot, "recurrence")==0) {
+    else if(strcmp(ot, "recurrence")==0) {
         if((strcmp(rep1, "DFA")==0 || strcmp(rep1, "LTF")==0 || strcmp(rep1, "LTF_N")==0)) 
             composed_rep = "LTF_N";
     }
+    printf("composed_rep =%s \n", composed_rep);
     return composed_rep;
 }
 
 // dc: 27/11/22 - change function to incorporate modification of ns and not rep
-char* composeNoiseSensitivity(char* ns, char* it, char* ot) {
-    printf("\ncomposeNoiseSensitivity ns = %s \t it = %s \t ot = %s\n", ns, it, ot);
+/*
+    This function returns the composition of noise sensitivity depending on the input and output transformation operations. 
+    This needs to be updated as per new operations and composition rules. 
+*/
+char* composeNoiseSensitivity(char* ns, char* rep, char* it, char* ot) {
+    printf("\ncomposeNoiseSensitivity ns = %s \t rep = %s \t it = %s \t ot = %s\n", ns, rep, it, ot);
     char* composed_ns;
     if(it==NULL && ot==NULL) 
         return ns;
     else if(ot==NULL) {//for only input transformations
-        if(strcmp(ns,"LTF")==0) {
-            composed_ns = "LTF_N";
+        if(strcmp(rep,"LTF")==0) {
+            composed_ns = ns;
         }
-        else if(strcmp(ns, "DFA")==0) {    //for apuf
-            composed_ns = "LTF_N";
+        else if(strcmp(rep, "DFA")==0) {    //for apuf
+            composed_ns = ns;
         }
-        else if(strcmp(ns, "-")==0) {
-            composed_ns = "LTF_N";
+        else if(strcmp(rep, "-")==0) {
+            composed_ns = ns;
         }
     }
     else if(it==NULL) {// for only output transformations
-        if(strcmp(ns , "LTF")==0 || strcmp(ns , "LTF_N")==0) {
+        if(strcmp(rep , "LTF")==0 || strcmp(ns , "LTF_N")==0) {
             composed_ns = ns;
         }
-        else if(strcmp(ns , "DFA")==0) {  //dc: change this, transform dfa to ltf depending on the output transformation
-            composed_ns = "LTF";
+        else if(strcmp(rep , "DFA")==0) {  
+            composed_ns = ns;
         }
-        else if(strcmp(ns , "DL")==0) {  //dc: dl remains same for any output transformation operation
-            composed_ns = "DL";
+        else if(strcmp(rep , "DL")==0) {  
+            composed_ns = ns;
         }
     }
     return composed_ns;
@@ -1294,50 +1255,50 @@ char* composeNoiseSensitivity(char* ns, char* it, char* ot) {
 }*/
 
 void printGraphNode(GraphNode* gnode) {
-    printf("==========================\nGraphNode : \n");
-    printf("  varName = %s\n", gnode->varName);
-    printf("  adjList = %d \t", (gnode->adjList!=NULL));
-    if(gnode->adjList!=NULL) {
-        for(int j=0;j<gnode->outDeg;j++) {
-            printf("-> %s", gnode->adjList[j]);
-        }
-    }
-    printf("\n");
-    printf("  outDeg = %d\n", gnode->outDeg);
-    printf("  visited = %d\n", gnode->visited);
-    printf("  isPrimitive = %d\n", gnode->isPrimitive);
-    printf("  inLoop = %d\n==========================\n", gnode->inLoop);
+    // printf("==========================\nGraphNode : \n");
+    // printf("  varName = %s\n", gnode->varName);
+    // printf("  adjList = %d \t", (gnode->adjList!=NULL));
+    // if(gnode->adjList!=NULL) {
+    //     for(int j=0;j<gnode->outDeg;j++) {
+    //         printf("-> %s", gnode->adjList[j]);
+    //     }
+    // }
+    // printf("\n");
+    // printf("  outDeg = %d\n", gnode->outDeg);
+    // printf("  visited = %d\n", gnode->visited);
+    // printf("  isPrimitive = %d\n", gnode->isPrimitive);
+    // printf("  inLoop = %d\n==========================\n", gnode->inLoop);
 }
 
 void printGraph() {
-    printf("==========================printGraph==========================\n");
-    GraphStartNode* gsNode = headInitNode;
-    while(gsNode) {
-        GraphNode* gnode = gsNode->initNode;
-        while(gnode) {
-            // printGraphNode(gnode);
-            printf("\n%s  ", gnode->varName);
-            if(gnode->adjList!=NULL) {
-                for(int j=0;j<gnode->outDeg;j++) {
-                    printf("-> %s", gnode->adjList[j]);
-                    GraphNode* inode = gnode;
-                    while(inode) {
-                        // printf("\nin inode loop \t inode->varName = %s \t gnode->adjList[%d] = %s\n", inode->varName, j, gnode->adjList[j]);
-                        if(strcmp(inode->varName, gnode->adjList[j])==0 && inode->visited==0) {
-                            printf("adj[%d]\n", j);
-                            printGraphNode(inode);
-                            inode->visited=1;
-                        }
-                        inode = inode->nextGraphNode;
-                    }
-                }
-            }
-            gnode = gnode->nextGraphNode;
-        }
-        gsNode = gsNode->nextStartNode;
-    }
+    // printf("==========================printGraph==========================\n");
+    // GraphStartNode* gsNode = headInitNode;
+    // while(gsNode) {
+    //     GraphNode* gnode = gsNode->initNode;
+    //     while(gnode) {
+    //         // printGraphNode(gnode);
+    //         printf("\n%s  ", gnode->varName);
+    //         if(gnode->adjList!=NULL) {
+    //             for(int j=0;j<gnode->outDeg;j++) {
+    //                 printf("-> %s", gnode->adjList[j]);
+    //                 GraphNode* inode = gnode;
+    //                 while(inode) {
+    //                     // printf("\nin inode loop \t inode->varName = %s \t gnode->adjList[%d] = %s\n", inode->varName, j, gnode->adjList[j]);
+    //                     if(strcmp(inode->varName, gnode->adjList[j])==0 && inode->visited==0) {
+    //                         printf("adj[%d]\n", j);
+    //                         printGraphNode(inode);
+    //                         inode->visited=1;
+    //                     }
+    //                     inode = inode->nextGraphNode;
+    //                 }
+    //             }
+    //         }
+    //         gnode = gnode->nextGraphNode;
+    //     }
+    //     gsNode = gsNode->nextStartNode;
+    // }
     
-    printf("\n======================end of printGraph=======================\n");
+    // printf("\n======================end of printGraph=======================\n");
 }
 
 int checkSelfAssignment(AssignmentNode* assignment) {
@@ -1458,7 +1419,7 @@ void addEdge(AssignmentNode* assignment) {
     //primitive call output assigned to a variable - add edges of the input variables of the primitive to the primitive output
     if(assignment->primitiveCallPointer) {
         char* inputdef = assignment->primitiveCallPointer->inputVariable;
-        printf("inputdef = %s\n", inputdef);
+        // printf("inputdef = %s\n", inputdef);
         
         char * inp_var = strtok(inputdef, ",");  //add the prim call in the adjacency list of the input params
         while( inp_var != NULL ) { // loop through the string to extract all other tokens
@@ -1471,7 +1432,7 @@ void addEdge(AssignmentNode* assignment) {
                   gnode - nodes corresponding to the module input params
                 */
                 while(gnode) {
-                    printf("\t\tin gnode loop - %s - %s\n", gnode->varName, inp_var);
+                    // printf("\t\tin gnode loop - %s - %s\n", gnode->varName, inp_var);
                     if(strcmp(gnode->varName, inp_var)==0) {
                         // printf("----------------------found input_variable----------------------\n");
                         gnode->outDeg += 1;
@@ -2375,6 +2336,11 @@ char* identifyOutputTransformation (ModuleNode *module, ModuleNode *submod) {
     return output_trans_type;
 }
 
+char* check_submodule_connection_2 (ModuleNode *module, ModuleNode *currentSubmodule, ModuleNode *nextSubmodule) {
+    printf("check_submodule_connection_2\n");
+    return "";
+}
+
 /**************************************************************************************** 
                         end of PUF identification functions 
 *****************************************************************************************/
@@ -2605,11 +2571,10 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
     while(subModulesIter) {
         if(!subModulesIter->modulePointer) { //the primitive module definition does not exists - it is either a primitive element or not defined
             printf("in if while subModulesIter->primitiveName = %s\n", subModulesIter->primitiveName);
-        
             rep = getRepresentation(subModulesIter->primitiveName);
             ns = getNoiseSensitivity(subModulesIter->primitiveName);
             subModulesIter->rep = rep;
-            subModulesIter->ns = na;
+            subModulesIter->ns = ns;
             if(PACSetting==0) {
                 printf("rep=%s\n", rep);
                 return rep;
@@ -2661,15 +2626,40 @@ char* identifyModule (ModuleNode *module, int PACSetting) {
             return rep;    
         }
         else if(PACSetting==1) {
-            ns = composeNoiseSensitivity(ns, it, ot);
+            ns = composeNoiseSensitivity(ns, rep, it, ot);
             printf("in DD Setting numberOfSubModules = 1 ----> type = %s \t composed rep = %s\n", type, rep);
             return ns;
         }
     }
     else if(numberOfSubModules==2) {
         printf("-------------------------------- numberOfSubModules = 2\n");// \t\t it = %s \t ot = %s\n", it, ot);
+        subModulesIter = subModuleList;
+        while(subModulesIter) {
+            ModuleNode* currentSubmodule = subModulesIter->modulePointer;
+            if(subModulesIter->nextPrim) {
+                ModuleNode* nextSubmodule = subModulesIter->nextPrim->modulePointer;
 
-        return "";
+                char *relation = check_submodule_connection_2(module, currentSubmodule, nextSubmodule);
+                char *rep1 = subModuleList->rep;//representation of first submodule
+                char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
+                // printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
+                printf("-- rep1 = %s \t rep2 = %s \n", rep1, rep2); //, relation);
+                type = getModuleName(module);
+                // rep = composeRepresentationGeneric(rep1, rep2, relation);
+                printf("----> type = %s \t rep = %s\n", type, rep);
+            }
+
+            subModulesIter = subModulesIter->nextPrim;
+        }
+        // char *relation = check_submodule_connection(module, subModuleList);
+        // char *rep1 = subModuleList->rep;//representation of first submodule
+        // char *rep2 = subModuleList->nextPrim->rep;//representation of second submodule
+        // printf("-- rep1 = %s \t rep2 = %s \t relation = %s \n", rep1, rep2, relation);
+        // type = getModuleName(module);
+        // rep = composeRepresentationGeneric(rep1, rep2, relation);
+        // printf("----> type = %s \t rep = %s\n", type, rep);
+        // return rep;
+        // return "";
     }
 
 }
@@ -3299,6 +3289,7 @@ void extraxtPACComplexityFromPUFGObjectModel() {
     printf("--------------------after handleInput--------------------\n");
     // char* rep = identify_modules(currentModuleNode);
     // char* rep = identifyModulesCombined(currentModuleNode);
+
     int PACSetting = 0; //PACSetting = 0 for distribution indpendent and 1 for uniform distribution and 2 for VC dimension
     char* rep = identifyModule(currentModuleNode, PACSetting);
     char* NS;
@@ -3312,7 +3303,8 @@ void extraxtPACComplexityFromPUFGObjectModel() {
     // compute_sample_complexity(param, rep);
     computeSampleComplexity(param, PACSetting, rep, NS);
 
-    /*// representation class found in distribution independent setting
+/*  // to be removed - dec 2
+    // representation class found in distribution independent setting
     if(PACSetting==0 && rep!=NULL) {
         param = modifyParam(currentModuleNode, rep, param);
         computeSampleComplexity(param, rep);
@@ -3348,7 +3340,7 @@ void extraxtPACComplexityFromPUFGObjectModel() {
  *****************************************************************/
 int main(int argc, char **argv){
     // unsigned long int start = timestamp();
-    printf("in main\n");
+    // printf("in main\n");
     // Opening the Read-Write Files From Command-Line Input
     if(argc > 3){
         fprintf(stderr,"Error: Too Many Arguements!!\n");
