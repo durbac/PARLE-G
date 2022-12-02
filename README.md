@@ -98,7 +98,9 @@ Refer to the link [here](http://cse.iitkgp.ac.in/~debdeep/osscrypto/PUFG.pdf) fo
 5. Execute the object file with the input PUF description
 > ./puf_g.out <file_name>
 
-## Implemneted features
+For ease of use, we have added a test_run.sh file that consists of scripts to run PARLE-G on some example PUF designs. 
+
+## Implemented features
   - Identification of primitive PUF constructions such as APUF, ROPUF
   - Identification of input transformation operations such as feed-forward, interposition, recurrence
   - Identification of output transformation operations such as XOR, MUX Network, Bent function
